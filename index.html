@@ -15,6 +15,13 @@
   <!-- Vue.js 3 CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
+  <!-- Leaflet.js 地圖套件 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- SortableJS 拖曳套件 -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
   <script>
     tailwind.config = {
       theme: {
@@ -82,7 +89,6 @@
       box-shadow: inset 1px 0 0 rgba(0,0,0,0.06);
     }
 
-    /* 原生彈跳抽屜動畫 (Spring-Bounce In) */
     @keyframes springBounceUp {
       0% {
         opacity: 0;
@@ -105,6 +111,15 @@
       animation: springBounceUp 0.42s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
       will-change: transform, opacity;
     }
+
+    .sortable-ghost {
+      opacity: 0.35;
+      background-color: #F5EFEB !important;
+      border: 1.5px dashed #B5838D !important;
+    }
+    .sortable-chosen {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+    }
   </style>
 </head>
 <body class="font-sans antialiased text-stone-800 bg-kbg min-h-screen pb-24">
@@ -122,7 +137,7 @@
           </div>
         </div>
         
-        <!-- 右側：同色系 Icon 導航按鈕 (帳本 & 資訊) -->
+        <!-- 右側：Icon 導航按鈕 (帳本 & 資訊) -->
         <div class="flex items-center gap-1.5">
           <button 
             @click="currentTab = (currentTab === 'BOOK' ? 'HOME' : 'BOOK')" 
@@ -229,7 +244,7 @@
           </div>
         </div>
 
-        <!-- 行前確認清單 (Checklist) -->
+        <!-- 行前確認清單 -->
         <div class="app-card p-5">
           <div class="flex items-center justify-between mb-2.5">
             <div>
@@ -279,21 +294,21 @@
           </div>
         </div>
 
-        <!-- 首頁全行程地圖卡片 -->
+        <!-- 2. 首爾地圖 (標題已更改) -->
         <div class="app-card p-4">
           <div class="flex justify-between items-center mb-2.5">
             <div class="flex items-center gap-2">
               <span class="text-base">📍</span>
-              <h3 class="text-xs font-bold text-stone-800">首爾全行程地圖檢視</h3>
+              <h3 class="text-xs font-bold text-stone-800">首爾地圖</h3>
             </div>
-            <a href="https://map.naver.com" target="_blank" class="text-xs text-morandi-trans underline font-serif">開啟 NAVER Map</a>
+            <a href="https://map.naver.com" target="_blank" class="text-xs text-morandi-trans underline font-serif">開啟 NAVER 導航 ↗</a>
           </div>
-          <div class="rounded-xl bg-stone-100/90 h-32 relative overflow-hidden flex flex-col items-center justify-center border border-stone-200/60 p-3 text-center">
-            <p class="text-xs font-medium text-stone-700">東大門 ➔ 聖水洞 ➔ 漢南洞 ➔ 龍山區</p>
-            <p class="text-[10px] text-stone-400 mt-1">點擊每日行程卡片均可自動導航至 NAVER MAP 確切坐標</p>
-            <a href="https://map.naver.com/v5/search/서울시" target="_blank" class="mt-2.5 inline-block px-3 py-1 bg-white border border-stone-200 rounded-full text-[10px] font-medium text-stone-700 shadow-2xs">
-              開啟全覽地圖 ↗
-            </a>
+          
+          <div id="homeMap" class="w-full h-44 rounded-xl border border-stone-200/80 overflow-hidden z-10"></div>
+          
+          <div class="mt-2.5 flex justify-between items-center text-[10px] text-stone-400">
+            <span>東大門 ➔ 聖水 ➔ 漢南洞 ➔ 龍山</span>
+            <span>可自由縮放與拖曳</span>
           </div>
         </div>
 
@@ -302,7 +317,7 @@
       <!-- ================= 1. 每日行程分頁 (DAY0 ~ DAY3) ================= -->
       <section v-if="['DAY0', 'DAY1', 'DAY2', 'DAY3'].includes(currentTab)" class="space-y-4">
         
-        <!-- 當日 24H 天氣預報卡 -->
+        <!-- 3. 當日天氣預報卡：每2小時顯示一個，左右流暢橫向捲動 (如 iPhone 天氣) -->
         <div class="app-card p-4">
           <div class="flex justify-between items-start mb-2.5">
             <div>
@@ -316,36 +331,78 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar pt-2 border-t border-stone-100">
+          <!-- 左右拖曳每2小時天氣橫向捲軸 -->
+          <div class="flex items-center gap-2.5 overflow-x-auto hide-scrollbar pt-2 pb-1 border-t border-stone-100 scroll-smooth">
             <div 
               v-for="(w, idx) in weatherInfo[currentTab].hourly" 
               :key="idx"
-              class="flex flex-col items-center flex-shrink-0 w-12 py-1.5 rounded-xl bg-stone-50/80 border border-stone-100"
+              class="flex flex-col items-center flex-shrink-0 w-12 py-2 rounded-2xl bg-stone-50/90 border border-stone-100 shadow-2xs"
             >
-              <span class="text-[9px] font-serif text-stone-400">{{ w.time }}</span>
-              <span class="text-base my-1">{{ w.icon }}</span>
+              <span class="text-[9.5px] font-serif text-stone-400">{{ w.time }}</span>
+              <span class="text-base my-1.5">{{ w.icon }}</span>
               <span class="text-xs font-serif font-semibold text-stone-700">{{ w.temp }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 每日垂直時間軸行程清單 -->
-        <div class="relative pl-6 space-y-3.5 before:content-[''] before:absolute before:left-[11px] before:top-3 before:bottom-3 before:w-[1.5px] before:bg-stone-200">
-          
+        <!-- 獨立的同色系「新增」與「編輯」雙按鈕 -->
+        <div class="flex items-center justify-between px-1">
+          <span class="text-xs font-bold text-stone-800 font-serif tracking-wider">ITINERARY</span>
+          <div class="flex items-center gap-1.5">
+            <button 
+              @click="openAddSpotModal" 
+              class="px-2.5 py-1.5 bg-stone-800 text-white rounded-full text-[11px] font-medium shadow-2xs flex items-center gap-1 active:scale-95 transition"
+            >
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>新增</span>
+            </button>
+
+            <button 
+              @click="toggleEditMode" 
+              class="px-2.5 py-1.5 rounded-full text-[11px] font-medium border flex items-center gap-1 transition-all shadow-2xs active:scale-95"
+              :class="isEditMode ? 'bg-morandi-food text-white border-morandi-food' : 'bg-white text-stone-700 border-stone-200/80'"
+            >
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              <span>{{ isEditMode ? '完成' : '編輯' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 支援手勢觸控拖曳排序的清單容器 -->
+        <div 
+          id="itineraryList" 
+          class="relative pl-6 space-y-3.5 before:content-[''] before:absolute before:left-[11px] before:top-3 before:bottom-3 before:w-[1.5px] before:bg-stone-200"
+        >
           <div 
             v-for="(spot, sIdx) in itineraryData[currentTab]" 
-            :key="sIdx"
+            :key="spot.id"
+            :data-id="spot.id"
             class="relative cursor-pointer group"
-            @click="openModal(spot)"
           >
+            <!-- 時間軸圓點 -->
             <div 
               class="absolute -left-[19px] top-4 w-2.5 h-2.5 rounded-full border-2 border-white shadow-xs transition-transform group-hover:scale-125"
               :style="{ backgroundColor: getBadgeColor(spot.type) }"
             ></div>
 
-            <div class="app-card p-4 active:scale-[0.99] transition-transform">
+            <div 
+              class="app-card p-4 transition-all"
+              :class="isEditMode ? 'border-dashed border-morandi-food/60' : 'active:scale-[0.99]'"
+              @click="!isEditMode && openModal(spot)"
+            >
               <div class="flex items-center justify-between">
-                <span class="text-xs font-serif font-semibold text-stone-400">{{ spot.time }}</span>
+                <div class="flex items-center gap-2">
+                  <span v-if="isEditMode" class="drag-handle text-stone-400 hover:text-stone-800 text-sm cursor-grab active:cursor-grabbing px-1 font-mono select-none">
+                    ⠿
+                  </span>
+                  <span class="text-xs font-serif font-semibold text-stone-400">{{ spot.time }}</span>
+                </div>
                 <span 
                   class="text-[9px] font-serif uppercase tracking-wider px-2 py-0.5 rounded-full font-medium"
                   :style="{ backgroundColor: getBadgeBg(spot.type), color: getBadgeColor(spot.type) }"
@@ -363,6 +420,7 @@
                 {{ spot.summary }}
               </p>
 
+              <!-- 莫蘭迪色標籤 -->
               <div v-if="spot.tags && spot.tags.length" class="flex flex-wrap gap-1.5 mt-2.5">
                 <span 
                   v-for="(tg, tIdx) in spot.tags" 
@@ -374,8 +432,8 @@
                 </span>
               </div>
 
-              <!-- 底部 MORE 與 NAVER MAP 📍 圖示按鈕 -->
-              <div class="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-[11px]">
+              <!-- 正常模式：底部 MORE 與 NAVER MAP -->
+              <div v-if="!isEditMode" class="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-[11px]">
                 <span class="text-stone-400 font-serif tracking-wider text-[10px] font-semibold">{{ spot.address || 'MORE' }}</span>
                 <a 
                   v-if="spot.naverMap" 
@@ -387,9 +445,34 @@
                   <span>📍</span> NAVER
                 </a>
               </div>
+
+              <!-- 編輯模式：拖曳指引與修改/刪除按鈕 -->
+              <div v-else class="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-[10px]">
+                <span class="text-morandi-food font-serif">長按 ⠿ 拖曳調整順序</span>
+                <div class="flex gap-1.5">
+                  <button 
+                    @click.stop="openEditSpotModal(spot, sIdx)" 
+                    class="px-2.5 py-1 bg-stone-100 text-stone-700 hover:bg-stone-200 rounded-md font-medium"
+                  >
+                    修改
+                  </button>
+                  <button 
+                    @click.stop="deleteSpot(sIdx)" 
+                    class="px-2 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md font-medium"
+                  >
+                    刪除
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
+        </div>
 
+        <div v-if="isEditMode" class="text-center pt-2">
+          <button @click="resetDefaultItinerary" class="text-[11px] text-stone-400 underline">
+            恢復此日行程至預設值
+          </button>
         </div>
 
       </section>
@@ -434,7 +517,7 @@
           </div>
         </div>
 
-        <!-- 消費明細列表 (支援刪除 ✕) -->
+        <!-- 消費明細列表 -->
         <div class="app-card p-4 space-y-2">
           <div class="flex justify-between items-center mb-1">
             <h3 class="text-xs font-bold text-stone-700 font-serif">支出明細清單</h3>
@@ -539,7 +622,7 @@
 
     </main>
 
-    <!-- ================= 🛒 右下角懸浮購物車按鈕 (Cart FAB) ================= -->
+    <!-- ================= 🛒 右下角懸浮購物車按鈕 ================= -->
     <div class="fixed bottom-6 right-5 z-40">
       <button 
         @click="showCartModal = true" 
@@ -561,121 +644,158 @@
       </button>
     </div>
 
-    <!-- ================= 🛒 購物清單抽屜彈窗 (Shopping Cart Modal - 彈跳效果) ================= -->
+    <!-- ================= 🛒 1. SHOPPING LIST 彈窗 (統一預覽圖片大小 56x56) ================= -->
     <div 
       v-if="showCartModal" 
       class="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 backdrop-blur-xs transition-opacity duration-300"
       @click.self="showCartModal = false"
     >
-      <div class="w-full max-w-md bg-white rounded-t-[28px] max-h-[88vh] overflow-y-auto p-5 pb-9 shadow-2xl relative modal-bounce-in flex flex-col">
+      <div class="w-full max-w-md bg-[#FBFBFA] rounded-t-[32px] max-h-[90vh] overflow-y-auto p-5 pb-9 shadow-2xl relative modal-bounce-in flex flex-col">
         
-        <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+        <!-- 頂部標題列 -->
+        <div class="flex items-center justify-between pb-3">
           <div class="flex items-center gap-2">
-            <span class="text-base">🛍️</span>
-            <h2 class="text-base font-serif font-bold text-stone-900">購物清單 (Wishlist)</h2>
-            <span class="text-xs text-stone-400 font-serif">({{ shoppingList.filter(i => i.bought).length }}/{{ shoppingList.length }})</span>
+            <div class="w-7 h-7 rounded-xl bg-[#3D2D27] text-white flex items-center justify-center shadow-xs">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+                <path d="M3 6h18"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+            </div>
+            <h2 class="text-base font-serif font-bold text-[#3D2D27] tracking-wider">SHOPPING LIST</h2>
           </div>
-          <button @click="showCartModal = false" class="w-7 h-7 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center text-xs font-semibold">✕</button>
+          <button @click="showCartModal = false" class="w-7 h-7 rounded-full bg-white border border-stone-200 text-stone-500 flex items-center justify-center text-xs font-semibold shadow-2xs">✕</button>
         </div>
 
-        <div class="mt-3.5 p-3.5 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2.5">
-          <div class="text-[11px] font-bold text-stone-700 flex items-center justify-between">
-            <span>貼上商品連結或自訂品名</span>
-            <span class="text-[10px] text-stone-400 font-normal">支援自動帶出預覽</span>
-          </div>
-          
+        <!-- 快速新增列 -->
+        <div class="mt-1 p-3 bg-white rounded-2xl border border-stone-200/70 shadow-2xs space-y-2">
           <div class="flex gap-2">
             <input 
-              v-model="newCartItem.urlOrName" 
-              @input="handleUrlDetect"
-              placeholder="貼上網址 (如 Olive Young) 或輸入商品名稱" 
-              class="flex-1 bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-stone-400" 
+              v-model="newCartItem.title" 
+              placeholder="輸入商品名稱或貼上連結..." 
+              class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-stone-400" 
             />
           </div>
-
           <div class="grid grid-cols-3 gap-2">
-            <select v-model="newCartItem.store" class="bg-white border border-stone-200 rounded-xl px-2.5 py-2 text-xs outline-none text-stone-700 col-span-1">
-              <option value="聖水 (Hetras / fwee)">聖水文創</option>
-              <option value="明洞 (Nova藥局 / 樂天)">明洞藥妝</option>
-              <option value="清溪川 (emart 超市)">emart超市</option>
-              <option value="漢南洞 (潮流選品)">漢南服飾</option>
-              <option value="免稅提貨 / 機場">免稅商品</option>
+            <select v-model="newCartItem.store" class="bg-stone-50 border border-stone-200 rounded-xl px-2 py-1.5 text-[11px] outline-none text-stone-700">
+              <option value="Olive Young">Olive Young</option>
+              <option value="聖水文創 (Hetras / fwee)">聖水文創</option>
+              <option value="明洞藥局 / 百貨">明洞藥局</option>
+              <option value="清溪川 emart 超市">emart 超市</option>
+              <option value="漢南洞潮流選品">漢南潮流</option>
             </select>
-
             <input 
-              v-model.number="newCartItem.price" 
+              v-model.number="newCartItem.priceTWD" 
               type="number" 
-              placeholder="預估金額 (₩)" 
-              class="bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs outline-none col-span-1" 
+              placeholder="台幣 NT$" 
+              class="bg-stone-50 border border-stone-200 rounded-xl px-2.5 py-1.5 text-[11px] outline-none" 
             />
-
             <button 
               @click="addCartItem" 
-              class="bg-stone-900 text-white rounded-xl text-xs font-medium active:scale-95 transition col-span-1"
+              class="bg-stone-800 text-white rounded-xl text-[11px] font-medium active:scale-95 transition"
             >
-              加入清單
+              ＋ 加入
             </button>
-          </div>
-
-          <div v-if="urlPreview" class="p-2 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center gap-2 text-[11px] text-emerald-800">
-            <span class="text-sm">✨</span>
-            <span class="truncate flex-1">已識別：{{ urlPreview.title }}</span>
           </div>
         </div>
 
-        <div class="mt-4 space-y-4 flex-1 overflow-y-auto">
+        <!-- 依店家分組清單 -->
+        <div class="mt-3.5 space-y-4 flex-1 overflow-y-auto">
           <div v-if="Object.keys(groupedCart).length === 0" class="py-12 text-center text-stone-400 text-xs">
-            購物車空空的，快把想買的香氛、唇泥或零食加進來！
+            目前清單尚無項目，點擊上方快速新增！
           </div>
 
-          <div v-for="(items, storeName) in groupedCart" :key="storeName" class="space-y-2">
-            <div class="flex items-center justify-between px-1">
-              <span class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-morandi-shop"></span>
-                {{ storeName }}
-              </span>
-              <span class="text-[10px] text-stone-400 font-serif">
-                {{ items.filter(i => i.bought).length }}/{{ items.length }} 件已購
-              </span>
+          <div 
+            v-for="(items, storeName) in groupedCart" 
+            :key="storeName" 
+            class="bg-white rounded-[26px] border border-stone-200/80 p-4 shadow-sm space-y-3"
+          >
+            <!-- 店家標題與進度條 -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-stone-700 text-lg">🏪</span>
+                <div>
+                  <h3 class="text-sm font-bold text-stone-900 leading-tight">{{ storeName }}</h3>
+                  <span class="text-[10px] text-stone-400 font-serif uppercase tracking-wider block mt-0.5">
+                    {{ items.filter(i => i.bought).length }}/{{ items.length }} BOUGHT
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <div class="w-14 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                  <div 
+                    class="h-full bg-morandi-food rounded-full transition-all duration-300"
+                    :style="{ width: `${(items.filter(i => i.bought).length / items.length) * 100}%` }"
+                  ></div>
+                </div>
+                <span class="text-xs text-stone-400">⌃</span>
+              </div>
             </div>
 
-            <div class="space-y-1.5">
+            <!-- 商品項目卡片列表 (統一圖示尺寸 56x56 px, 圓角12px, object-cover) -->
+            <div class="space-y-2.5 pt-0.5">
               <div 
-                v-for="(item, idx) in items" 
+                v-for="item in items" 
                 :key="item.id"
-                class="p-2.5 rounded-xl border flex items-center justify-between transition-all"
-                :class="item.bought ? 'bg-stone-50/70 border-stone-100 text-stone-400' : 'bg-white border-stone-200/80 shadow-2xs text-stone-800'"
+                class="bg-white rounded-2xl border border-stone-100 p-3 shadow-[0_2px_10px_-2px_rgba(0,0,0,0.04)] flex items-center justify-between gap-3"
               >
-                <div class="flex items-center gap-2.5 flex-1 min-w-0" @click="toggleCartItem(item.id)">
-                  <div 
-                    class="w-4.5 h-4.5 rounded-md border flex items-center justify-center cursor-pointer transition-colors"
-                    :class="item.bought ? 'bg-stone-800 border-stone-800 text-white' : 'border-stone-300 bg-white'"
-                  >
-                    <span v-if="item.bought" class="text-[10px]">✓</span>
-                  </div>
+                <!-- 左側：打勾按鈕 -->
+                <button 
+                  @click="toggleCartItem(item.id)" 
+                  class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 border transition-all"
+                  :class="item.bought ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : 'border-stone-300 bg-white'"
+                >
+                  <svg v-if="item.bought" class="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </button>
 
-                  <div class="w-8 h-8 rounded-lg bg-stone-100 border border-stone-200/60 flex items-center justify-center text-sm overflow-hidden shrink-0">
-                    <img v-if="item.thumb" :src="item.thumb" class="w-full h-full object-cover" />
-                    <span v-else>{{ item.icon || '🛍️' }}</span>
-                  </div>
+                <!-- 中間：嚴格統一規格 56x56 (w-14 h-14) 預覽縮圖容器 -->
+                <div class="w-14 h-14 rounded-xl bg-stone-50 border border-stone-100/90 flex items-center justify-center overflow-hidden shrink-0">
+                  <img 
+                    v-if="item.img" 
+                    :src="item.img" 
+                    class="w-full h-full object-cover object-center" 
+                    loading="lazy"
+                  />
+                  <span v-else class="text-2xl">🛍️</span>
+                </div>
 
-                  <div class="min-w-0 flex-1 cursor-pointer">
-                    <div class="text-xs font-medium truncate" :class="{ 'line-through': item.bought }">
+                <!-- 資訊區 -->
+                <div class="flex-1 min-w-0 pr-1">
+                  <div class="flex items-center justify-between">
+                    <h4 
+                      class="text-xs font-medium text-stone-800 truncate"
+                      :class="{ 'line-through text-stone-400': item.bought }"
+                    >
                       {{ item.title }}
-                    </div>
-                    <div class="text-[10px] text-stone-400 flex items-center gap-2 mt-0.5 font-serif">
-                      <span v-if="item.price">₩ {{ item.price.toLocaleString() }} (約 NT$ {{ Math.round(item.price / 42) }})</span>
-                      <a v-if="item.link" :href="item.link" target="_blank" @click.stop class="text-morandi-trans underline">連結 ↗</a>
-                    </div>
+                    </h4>
+                    <a v-if="item.link" :href="item.link" target="_blank" class="text-stone-400 hover:text-stone-700 ml-1 text-xs">
+                      ↗
+                    </a>
+                  </div>
+                  <div class="text-[11px] text-stone-400 font-serif mt-1">
+                    NT${{ item.priceTWD }}
                   </div>
                 </div>
 
-                <button 
-                  @click="deleteCartItem(item.id)" 
-                  class="w-5 h-5 rounded-full text-stone-300 hover:text-rose-500 flex items-center justify-center text-[11px] ml-2"
-                >
-                  ✕
-                </button>
+                <!-- 右側工具：編輯與刪除 -->
+                <div class="flex flex-col items-center gap-2 pl-1 border-l border-stone-100 text-stone-300">
+                  <button @click="editCartItemPrompt(item)" class="hover:text-stone-600 transition-colors">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 20h9"></path>
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                  </button>
+                  <button @click="deleteCartItem(item.id)" class="hover:text-rose-500 transition-colors">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+
               </div>
             </div>
           </div>
@@ -684,7 +804,70 @@
       </div>
     </div>
 
-    <!-- ================= 原生抽屜 / 行程詳情彈窗 (Modal Detail - 彈跳效果) ================= -->
+    <!-- ================= ✏️ 手機編輯行程 Modal ================= -->
+    <div 
+      v-if="editingSpot" 
+      class="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 backdrop-blur-xs transition-opacity"
+      @click.self="editingSpot = null"
+    >
+      <div class="w-full max-w-md bg-white rounded-t-[28px] max-h-[85vh] overflow-y-auto p-5 pb-8 shadow-2xl relative modal-bounce-in space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-stone-100">
+          <h3 class="text-sm font-bold text-stone-800 font-serif">
+            {{ editingSpotIndex === -1 ? '新增行程景點' : '編輯行程景點' }}
+          </h3>
+          <button @click="editingSpot = null" class="text-xs text-stone-400">取消</button>
+        </div>
+
+        <div class="space-y-2.5 text-xs">
+          <div>
+            <label class="text-[10px] text-stone-400 block mb-1">時間 (例如: 14:00)</label>
+            <input v-model="editingSpot.time" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-stone-400 block mb-1">景點/餐廳名稱</label>
+              <input v-model="editingSpot.title" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
+            </div>
+            <div>
+              <label class="text-[10px] text-stone-400 block mb-1">韓文名稱 (選填)</label>
+              <input v-model="editingSpot.krTitle" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-[10px] text-stone-400 block mb-1">分類類別</label>
+            <select v-model="editingSpot.type" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none text-stone-700">
+              <option value="FOOD">FOOD (餐飲)</option>
+              <option value="SHOP">SHOP (購物)</option>
+              <option value="SPOT">SPOT (景點)</option>
+              <option value="TRANS">TRANS (交通)</option>
+              <option value="STAY">STAY (住宿)</option>
+              <option value="CLINIC">CLINIC (醫美)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-[10px] text-stone-400 block mb-1">簡要說明 (Summary)</label>
+            <textarea v-model="editingSpot.summary" rows="2" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none"></textarea>
+          </div>
+
+          <div>
+            <label class="text-[10px] text-stone-400 block mb-1">地址 / 導航搜尋詞</label>
+            <input v-model="editingSpot.address" placeholder="例如: 서울 성동구 성수이로16길 32" class="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
+          </div>
+        </div>
+
+        <button 
+          @click="saveSpotEdit" 
+          class="w-full py-2.5 bg-stone-900 text-white rounded-xl text-xs font-bold active:scale-98 transition shadow-xs mt-2"
+        >
+          儲存變更
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= 行程詳情彈窗 (Modal Detail) ================= -->
     <div 
       v-if="selectedModal" 
       class="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 backdrop-blur-xs transition-opacity duration-300"
@@ -707,7 +890,17 @@
           <p v-if="selectedModal.krTitle" class="text-xs text-stone-400 font-serif mt-0.5">{{ selectedModal.krTitle }}</p>
         </div>
 
-        <!-- 憑證與訂單代號卡 -->
+        <!-- 詳情內嵌微型地圖預覽 -->
+        <div class="mt-3 rounded-xl overflow-hidden border border-stone-200 h-32 relative">
+          <iframe 
+            class="w-full h-full border-0 pointer-events-none"
+            :src="getMapPreviewUrl(selectedModal)"
+            loading="lazy">
+          </iframe>
+          <div class="absolute bottom-1 right-2 text-[9px] bg-white/80 px-1.5 py-0.5 rounded text-stone-500 font-serif">OpenStreetMap</div>
+        </div>
+
+        <!-- 憑證卡 -->
         <div v-if="selectedModal.confirmCode" class="mt-4 p-4 bg-stone-50 rounded-2xl border border-dashed border-stone-300 relative overflow-hidden">
           <div class="ticket-punch-l"></div>
           <div class="ticket-punch-r"></div>
@@ -746,7 +939,7 @@
           </div>
         </div>
 
-        <!-- 電話導航卡 (改為 📍 圖示) -->
+        <!-- 電話導航卡 -->
         <div class="mt-4 flex gap-2">
           <a 
             :href="selectedModal.naverMap || 'https://map.naver.com'" 
@@ -764,7 +957,7 @@
           </a>
         </div>
 
-        <!-- 故事與深度攻略專區：ABOUT、NOTES 與 TIPS -->
+        <!-- 故事與深度攻略專區 -->
         <div class="mt-4 space-y-3 text-xs leading-relaxed text-stone-600 bg-stone-50/70 p-4 rounded-2xl border border-stone-100">
           <div v-if="selectedModal.origin">
             <span class="font-bold font-serif uppercase tracking-wider text-stone-800 block mb-0.5">【ABOUT】</span>
@@ -786,7 +979,7 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted, watch } = Vue;
+    const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
     createApp({
       setup() {
@@ -794,6 +987,11 @@
         const selectedModal = ref(null);
         const showCartModal = ref(false);
         const copyStatus = ref(false);
+        const isEditMode = ref(false);
+
+        const editingSpot = ref(null);
+        const editingSpotIndex = ref(-1);
+        let sortableInstance = null;
 
         const dayTabs = [
           { id: 'DAY0', sub: 'FRI', date: '18' },
@@ -814,7 +1012,6 @@
         const getBadgeColor = (type) => colors[type] || '#8E8E93';
         const getBadgeBg = (type) => `${colors[type] || '#8E8E93'}18`;
 
-        // 行前準備與代辦清單
         const defaultChecklist = [
           { title: '預約機場接送 (9/15 10:00)', link: '', checked: false },
           { title: '預辦登機/選位 (9/18 01:25)', link: 'https://www.jinair.com/', checked: false },
@@ -830,82 +1027,153 @@
         ];
         const checklist = ref(defaultChecklist);
 
-        // 記帳資料庫
-        const defaultExpenses = [
+        const rawDefaultItinerary = {
+          DAY0: [
+            { id: 'd0_1', time: '21:20', type: 'TRANS', title: '泰山貴和 ➔ 桃園機場 T1', summary: '搭乘機場捷運，車程約35-40分鐘。預辦登機與線上選位已於起飛前24H完成。', tags: [{ text: '起飛前24H線上選位', color: '#805B74' }], lat: 25.0797, lng: 121.2342 },
+            { id: 'd0_2', time: '23:00', type: 'TRANS', title: '桃園機場 T1 辦理出境', summary: '航班 LJ734 (01:25-05:00)。托運行李、安檢出境、候機登機。', lat: 25.0797, lng: 121.2342 }
+          ],
+          DAY1: [
+            { id: 'd1_1', time: '05:00', type: 'TRANS', title: '仁川國際機場 T2 抵達', krTitle: '인천국제공항 제2여객터미널', summary: '入境後前往 B1 星巴克前方自動售票機購買機場巴士 6002 車票 (₩17,000)，直達東廟站。', naverMap: 'https://map.naver.com/v5/search/인천국제공항%20제2여객터미널', lat: 37.4692, lng: 126.4505 },
+            { id: 'd1_2', time: '08:00', type: 'STAY', title: '東廟 ARA Hotel 寄放行李', krTitle: '아라호텔', address: '서울 종로구 난계로29길 60', summary: '抵達飯店先寄放大型行李。入住時間 16:00 後，退房時間 9/21 12:00 前。', confirmCode: 'BOOKING-ARA-919', naverMap: 'https://map.naver.com/v5/search/서울%20종로구%20난계로29길%2060', phone: '02-2234-8888', origin: '東廟是首爾著名的復古跳蚤市場與清溪川交界處，鄰近東大門商圈。', highlight: '交通四通八達，早晨沿清溪川步道散步非常清幽。', lat: 37.5732, lng: 127.0245 },
+            { id: 'd1_3', time: '08:30', type: 'STAY', title: '東廟 SPAREX 汗蒸幕', krTitle: '스파렉스 동묘점', address: '서울 종로구 지봉로 19 13F', summary: '24小時營業。紅眼班機抵達後，先至 13 樓放鬆泡湯補眠充電。', naverMap: 'https://map.naver.com/v5/search/동묘%20스파렉스', tags: [{ text: '必吃 甜米釀+烤蛋', color: '#B5838D' }], origin: '首爾市中心老字號大規模汗蒸幕，具備傳統松木火汗蒸房與遼闊市景。', highlight: '進場領取專屬衣物與毛巾，在大廳地板鋪軟墊小憩，是舒緩紅眼疲累的最高享受。', menu: [{ zh: '甜米釀 (甜米露)', kr: '식혜 (Sikhye)' }, { zh: '炭烤雞蛋 (3顆)', kr: '구운계란 (3개)' }], lat: 37.5729, lng: 127.0163 },
+            { id: 'd1_4', time: '12:00', type: 'SHOP', title: '聖水洞 / 首爾林 文創探店', summary: '打卡清單：Dasique Flagship、Miffy Store、Hetras、fwee、NYU NYU、Musinsa Megastore。', address: '서울 성동구 성수이로', naverMap: 'https://map.naver.com/v5/search/성수동', tags: [{ text: '必買 Hetras室內擴香', color: '#C99E7A' }, { text: 'fwee 布丁唇泥', color: '#B5838D' }], origin: '早期為首爾製鞋與印刷工廠集散地，近年由獨立設計師與潮流快閃店進駐轉型。', highlight: 'Hetras 飯店香氛與 fwee 現場自選布丁小罐吊飾為高人氣必買伴手禮。', lat: 37.5445, lng: 127.0560 },
+            { id: 'd1_5', time: '17:30', type: 'FOOD', title: '囕盈豚 聖水店', krTitle: '남영돈 성수점', address: '서울 성동구 성수이로16길 32', summary: '首爾三大神級烤豬肉名店之一，以特選椴木炭火直烤與鮮甜多汁聞名。', naverMap: 'https://map.naver.com/v5/search/남영돈%20성수점', phone: '02-793-3598', tags: [{ text: '必吃 厚切松坂肉', color: '#B5838D' }, { text: '必點 水冷麵', color: '#8EA499' }], origin: '本店位於南營，因極致口感天天大排長龍，聖水店延續木炭煙燻直火風格。', highlight: '全程專人桌邊代烤，附贈辣拌蔥絲、白泡菜、芥末籽、明太子醬，層次極豐富。', tips: '松坂肉 (항정살) 必點，油花細緻脆彈；搭配冰涼爽口的水冷麵解膩是老饕吃法。', menu: [{ zh: '特選豬頸肉 / 松坂肉', kr: '항정살 (Hangjeong-sal)' }, { zh: '橫膈膜肉 (海鷗肉)', kr: '갈매기살 (Galmaegi-sal)' }, { zh: '爽口水冷麵', kr: '물냉면 (Mul Naengmyeon)' }, { zh: '白飯', kr: '공기밥' }], lat: 37.5420, lng: 127.0580 },
+            { id: 'd1_6', time: '19:30', type: 'SPOT', title: '盤浦漢江公園・月光彩虹噴泉', krTitle: '반포대교 달빛무지개분수', summary: '月光彩虹噴泉表演時間：19:30～21:00（每30分鐘演出一次）。', naverMap: 'https://map.naver.com/v5/search/반포대교%20달빛무지개분수', tags: [{ text: '夜景噴泉水舞秀', color: '#879883' }], origin: '名列金氏世界紀錄最長的橋樑噴泉，全長 1,140 公尺，配備數百個彩色噴嘴。', highlight: '坐在江邊草坪吹風，欣賞盤浦大橋隨音樂變換舞動的彩虹水幕與夜景。', lat: 37.5098, lng: 126.9947 },
+            { id: 'd1_7', time: '21:30', type: 'SHOP', title: '東大門現代 City Outlet & DOOTA', summary: '夜間逛街，享受東大門不夜城的購物魅力。', naverMap: 'https://map.naver.com/v5/search/현대시티아울렛%20동대문점', lat: 37.5687, lng: 127.0076 }
+          ],
+          DAY2: [
+            { id: 'd2_1', time: '10:30', type: 'SHOP', title: '明洞樂天百貨本店', summary: '免稅店與化妝品專櫃巡禮。', naverMap: 'https://map.naver.com/v5/search/롯데백화점%20본점', lat: 37.5651, lng: 126.9815 },
+            { id: 'd2_2', time: '11:45', type: 'SHOP', title: '明洞 NOVA 藥局', krTitle: '노바약국', address: '서울 중구 명동2길 53 1층 103호', summary: '營業時間 11:00-23:00。首爾採買韓系淡斑霜、高單位維他命與保健品人氣藥局。', naverMap: 'https://map.naver.com/v5/search/노바약국%20명동', tags: [{ text: '必買 韓國淡斑去疤膏', color: '#C99E7A' }], menu: [{ zh: '請推薦淡斑去疤膏', kr: '흉터치료제 추천해주세요' }, { zh: '高劑量綜合維他命', kr: '고함량 종합비타민' }], lat: 37.5615, lng: 126.9840 },
+            { id: 'd2_3', time: '13:00', type: 'SHOP', title: 'ILKW 漢南旗艦店', summary: '漢南洞潮流質感風格小眾服飾門市。', naverMap: 'https://map.naver.com/v5/search/한남동', lat: 37.5350, lng: 127.0010 },
+            { id: 'd2_4', time: '14:00', type: 'FOOD', title: '漢南洞馬鈴薯排骨湯 本店', krTitle: '한남동 감자탕 본점', address: '서울 용산구 대사관로 73 1층', summary: '眾多韓星與在地居民指定的老字號馬鈴薯排骨湯，濃郁大骨湯底。', naverMap: 'https://map.naver.com/v5/search/한남동%20감자탕%20본점', phone: '02-790-7737', tags: [{ text: '必吃 馬鈴薯排骨湯', color: '#B5838D' }, { text: '最後必點 炒飯', color: '#C99E7A' }], origin: '漢南洞三十年老舖，大塊軟爛脊骨搭配鬆軟馬鈴薯與濃香紫蘇葉。', highlight: '排骨輕輕一夾即骨肉分離，蘸上專屬黃芥末醬汁非常開胃。', tips: '肉吃完後鍋底精華務必加點「炒飯 (볶음밥)」，加入香油、紫蘇葉與海苔煎至酥脆鍋巴！', menu: [{ zh: '馬鈴薯排骨湯 (小)', kr: '감자탕 (소)' }, { zh: '馬鈴薯排骨湯 (中)', kr: '감자탕 (중)' }, { zh: '餐後精華炒飯', kr: '볶음밥' }, { zh: '加點拉麵麵條', kr: '라면사리' }], lat: 37.5338, lng: 127.0041 },
+            { id: 'd2_5', time: '15:30', type: 'SHOP', title: '漢南洞設計師品牌巡禮', summary: '逛 LOOKAST、FOLNUA 等韓國高質感設計師服飾與皮件門市。', naverMap: 'https://map.naver.com/v5/search/LOOKAST%20한남', lat: 37.5365, lng: 127.0005 },
+            { id: 'd2_6', time: '17:30', type: 'SPOT', title: '龍山解放村 & 新興市場', krTitle: '용산해방촌 신흥시장', address: '서울 용산구 용산동2가', summary: '傍晚抵達看首爾塔夕陽日落🌇，漫步新興市場文青咖啡廳與露天露台。', naverMap: 'https://map.naver.com/v5/search/용산동2가', tags: [{ text: '夕陽首爾塔打卡秘境', color: '#879883' }], origin: '解放村為依南山山坡而建的歷史街區，新興市場翻新後成為日落觀景勝地。', highlight: '天台露天座位可同時遠眺南山首爾塔與首爾市區壯麗全景。', lat: 37.5435, lng: 126.9868 },
+            { id: 'd2_7', time: '20:00', type: 'SHOP', title: '東大門 mini line', summary: '潮流特色配飾與選品。', naverMap: 'https://map.naver.com/v5/search/동대문', lat: 37.5710, lng: 127.0090 },
+            { id: 'd2_8', time: '21:00', type: 'SHOP', title: 'City Outlet emart 清溪川店', krTitle: '이마트 청계천점', address: '서울 중구 청계천로 400', summary: '韓國零食、泡麵、海苔、果醬大採購，支援現場退稅服務。', naverMap: 'https://map.naver.com/v5/search/이마트%20청계천점', tags: [{ text: '必買伴手禮退稅', color: '#C99E7A' }], lat: 37.5707, lng: 127.0223 }
+          ],
+          DAY3: [
+            { id: 'd3_1', time: '10:30', type: 'SHOP', title: '龍山 I\'Park Mall & 電子商場', summary: '大型綜合購物中心，逛品牌專櫃與生活日用品。', naverMap: 'https://map.naver.com/v5/search/용산%20아이파크몰', lat: 37.5298, lng: 126.9647 },
+            { id: 'd3_2', time: '15:00', type: 'CLINIC', title: 'COMO CLINIC 預約體驗', krTitle: '꼬모의원', address: '서울 용산구 이태원로 237 4층', summary: '預約時間 15:00，預計保留 2 小時。請攜帶護照辦理退稅。', confirmCode: '預約時間 15:00', confirmNote: '預約保留 2 小時，請提前10分鐘到場', naverMap: 'https://map.naver.com/v5/search/꼬모의원', phone: '02-790-0000', tags: [{ text: '預約時間 15:00', color: '#805B74' }], origin: '漢南洞與梨泰院交界的現代皮膚護理與醫美診所，具中文諮詢翻譯服務。', highlight: '隱私性高，施作前後享有獨立休息室與專人鎮定護理。', lat: 37.5372, lng: 127.0003 },
+            { id: 'd3_3', time: '18:00', type: 'TRANS', title: '首爾站 ➔ AREX 直達列車', summary: '搭地鐵至首爾站，換乘 AREX 直達列車直奔仁川機場 T2（車程約 51 分鐘）。', tags: [{ text: '先換好直達車票', color: '#6B8796' }], naverMap: 'https://map.naver.com/v5/search/서울역%20공항철도', lat: 37.5547, lng: 126.9706 },
+            { id: 'd3_4', time: '19:40', type: 'TRANS', title: '仁川機場 T2 免稅品提貨', summary: '提貨處(西側)：225號登機口對面，韓國傳統文化中心(西館)對面搭手扶梯下至2樓。', tags: [{ text: '225號登機口對面2F', color: '#C99E7A' }], highlight: '提領時務必隨身準備好「護照正本」與「登機證」。', lat: 37.4692, lng: 126.4505 },
+            { id: 'd3_5', time: '22:40', type: 'TRANS', title: '仁川國際機場 ➔ 桃園機場', summary: '航班 LJ733 (22:40 - 00:10+1)。滿載戰利品平安返台！', lat: 37.4692, lng: 126.4505 }
+          ]
+        };
+
+        const itineraryData = ref(rawDefaultItinerary);
+
+        const expenses = ref([
           { title: '機場巴士 6002 (2人)', category: 'TRANS', amount: 34000, date: '09/19' },
           { title: '東廟 SPAREX 汗蒸幕入場 (2人)', category: 'STAY', amount: 30000, date: '09/19' },
           { title: '囕盈豚 烤肉晚餐', category: 'FOOD', amount: 84000, date: '09/19' },
           { title: '漢南洞馬鈴薯排骨湯', category: 'FOOD', amount: 48000, date: '09/20' },
           { title: '清溪川 e-mart 零食採購', category: 'SHOP', amount: 92000, date: '09/20' },
           { title: 'AREX 機場快線直達票 (2人)', category: 'TRANS', amount: 22000, date: '09/21' }
-        ];
-        const expenses = ref(defaultExpenses);
+        ]);
         const newRecord = ref({ title: '', category: 'FOOD', amount: null });
 
-        // 購物清單系統
+        // 購物清單 (高畫質白底圖片，統一比例)
         const defaultShoppingList = [
-          { id: 1, title: 'Hetras 飯店香氛擴香瓶 (No.7 濟州椴木)', store: '聖水 (Hetras / fwee)', price: 18900, icon: '🌿', link: 'https://hetras.kr', bought: false },
-          { id: 2, title: 'fwee 經典布丁唇泥 + 鑰匙扣小布丁', store: '聖水 (Hetras / fwee)', price: 17000, icon: '💄', link: 'https://fwee.kr', bought: false },
-          { id: 3, title: '東亞製藥 諾斯卡納淡斑去疤膏', store: '明洞 (Nova藥局 / 樂天)', price: 20000, icon: '💊', link: '', bought: false },
-          { id: 4, title: '正官庄 高麗蔘精隨身包', store: '明洞 (Nova藥局 / 樂天)', price: 65000, icon: '🪵', link: '', bought: false },
-          { id: 5, title: 'Market O 布朗尼蛋糕 & 海苔禮盒', store: '清溪川 (emart 超市)', price: 24000, icon: '🍫', link: '', bought: false },
-          { id: 6, title: 'LOOKAST 針織開衫 / 毛衣外套', store: '漢南洞 (潮流選品)', price: 118000, icon: '🧥', link: '', bought: false }
+          { id: 1, title: 'Delight project Honey Butter Bagel Chips...', store: 'Olive Young', priceTWD: 110, img: 'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?w=200&auto=format&fit=crop&q=80', link: 'https://global.oliveyoung.com', bought: true },
+          { id: 2, title: 'Delight project Crispy Sliced Squid Sweet...', store: 'Olive Young', priceTWD: 245, img: 'https://images.unsplash.com/photo-1621996346565-e3d5d6281691?w=200&auto=format&fit=crop&q=80', link: 'https://global.oliveyoung.com', bought: true },
+          { id: 3, title: 'CLIO Kill Cover Founwear Cushion...', store: 'Olive Young', priceTWD: 726, img: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=200&auto=format&fit=crop&q=80', link: 'https://global.oliveyoung.com', bought: true },
+          { id: 4, title: 'Hetras 飯店香氛擴香瓶 (No.7 濟州椴木)', store: '聖水文創 (Hetras / fwee)', priceTWD: 450, img: 'https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?w=200&auto=format&fit=crop&q=80', link: '', bought: false },
+          { id: 5, title: 'fwee 布丁唇泥 (經典熱門色)', store: '聖水文創 (Hetras / fwee)', priceTWD: 390, img: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=200&auto=format&fit=crop&q=80', link: '', bought: false }
         ];
         const shoppingList = ref(defaultShoppingList);
+        const newCartItem = ref({ title: '', store: 'Olive Young', priceTWD: null });
 
-        const newCartItem = ref({ urlOrName: '', store: '聖水 (Hetras / fwee)', price: null });
-        const urlPreview = ref(null);
+        const setupSortable = () => {
+          nextTick(() => {
+            const el = document.getElementById('itineraryList');
+            if (!el) return;
+            if (sortableInstance) sortableInstance.destroy();
 
-        const handleUrlDetect = () => {
-          const val = newCartItem.value.urlOrName.trim();
-          if (val.startsWith('http://') || val.startsWith('https://')) {
-            try {
-              const parsed = new URL(val);
-              let inferredTitle = '線上選品 (點擊連結查看)';
-              let inferredStore = newCartItem.value.store;
-              let inferredIcon = '🔗';
-
-              if (parsed.hostname.includes('oliveyoung')) {
-                inferredTitle = 'Olive Young 人氣商品';
-                inferredStore = '明洞 (Nova藥局 / 樂天)';
-                inferredIcon = '🧴';
-              } else if (parsed.hostname.includes('hetras') || parsed.hostname.includes('fwee')) {
-                inferredTitle = '聖水洞專櫃美妝香氛';
-                inferredStore = '聖水 (Hetras / fwee)';
-                inferredIcon = '💄';
-              } else if (parsed.hostname.includes('musinsa') || parsed.hostname.includes('29cm')) {
-                inferredTitle = '韓國設計師潮流單品';
-                inferredStore = '漢南洞 (潮流選品)';
-                inferredIcon = '✨';
+            sortableInstance = new Sortable(el, {
+              handle: isEditMode.value ? '.drag-handle' : false,
+              animation: 200,
+              ghostClass: 'sortable-ghost',
+              chosenClass: 'sortable-chosen',
+              disabled: !isEditMode.value,
+              onEnd: (evt) => {
+                const list = itineraryData.value[currentTab.value];
+                const movedItem = list.splice(evt.oldIndex, 1)[0];
+                list.splice(evt.newIndex, 0, movedItem);
               }
+            });
+          });
+        };
 
-              urlPreview.value = { title: inferredTitle, link: val, store: inferredStore, icon: inferredIcon };
-              newCartItem.value.store = inferredStore;
-            } catch (e) {
-              urlPreview.value = null;
-            }
+        const toggleEditMode = () => {
+          isEditMode.value = !isEditMode.value;
+          setupSortable();
+        };
+
+        const openAddSpotModal = () => {
+          editingSpotIndex.value = -1;
+          editingSpot.value = {
+            id: 'spot_' + Date.now(),
+            time: '12:00',
+            type: 'SPOT',
+            title: '',
+            krTitle: '',
+            summary: '',
+            address: '',
+            naverMap: 'https://map.naver.com',
+            lat: 37.5665,
+            lng: 126.9780
+          };
+        };
+
+        const openEditSpotModal = (spot, index) => {
+          editingSpotIndex.value = index;
+          editingSpot.value = JSON.parse(JSON.stringify(spot));
+        };
+
+        const saveSpotEdit = () => {
+          if (!editingSpot.value.title) {
+            alert('請輸入景點名稱！');
+            return;
+          }
+          if (!editingSpot.value.naverMap || editingSpot.value.naverMap === 'https://map.naver.com') {
+            editingSpot.value.naverMap = `https://map.naver.com/v5/search/${encodeURIComponent(editingSpot.value.address || editingSpot.value.title)}`;
+          }
+
+          if (editingSpotIndex.value === -1) {
+            itineraryData.value[currentTab.value].push(editingSpot.value);
           } else {
-            urlPreview.value = null;
+            itineraryData.value[currentTab.value][editingSpotIndex.value] = editingSpot.value;
+          }
+          editingSpot.value = null;
+          setupSortable();
+        };
+
+        const deleteSpot = (index) => {
+          if (confirm('確定要刪除這個行程景點嗎？')) {
+            itineraryData.value[currentTab.value].splice(index, 1);
+          }
+        };
+
+        const resetDefaultItinerary = () => {
+          if (confirm('確定恢復此行程為初始資料嗎？')) {
+            itineraryData.value[currentTab.value] = JSON.parse(JSON.stringify(rawDefaultItinerary[currentTab.value]));
+            setupSortable();
           }
         };
 
         const addCartItem = () => {
-          if (!newCartItem.value.urlOrName) return;
-          const isUrl = newCartItem.value.urlOrName.startsWith('http');
-          
+          if (!newCartItem.value.title) return;
           shoppingList.value.unshift({
             id: Date.now(),
-            title: isUrl && urlPreview.value ? urlPreview.value.title : newCartItem.value.urlOrName,
+            title: newCartItem.value.title,
             store: newCartItem.value.store,
-            price: newCartItem.value.price || 0,
-            link: isUrl ? newCartItem.value.urlOrName : '',
-            icon: isUrl ? (urlPreview.value?.icon || '🛍️') : '🛍️',
+            priceTWD: newCartItem.value.priceTWD || 0,
+            img: '',
+            link: newCartItem.value.title.startsWith('http') ? newCartItem.value.title : '',
             bought: false
           });
-
-          newCartItem.value.urlOrName = '';
-          newCartItem.value.price = null;
-          urlPreview.value = null;
+          newCartItem.value.title = '';
+          newCartItem.value.priceTWD = null;
         };
 
         const toggleCartItem = (id) => {
@@ -917,6 +1185,13 @@
           shoppingList.value = shoppingList.value.filter(i => i.id !== id);
         };
 
+        const editCartItemPrompt = (item) => {
+          const newName = prompt('修改商品名稱：', item.title);
+          if (newName) item.title = newName;
+          const newPrice = prompt('修改台幣金額 (NT$)：', item.priceTWD);
+          if (newPrice) item.priceTWD = parseInt(newPrice) || item.priceTWD;
+        };
+
         const groupedCart = computed(() => {
           const groups = {};
           shoppingList.value.forEach(item => {
@@ -926,8 +1201,50 @@
           return groups;
         });
 
+        let mapInstance = null;
+        const initHomeMap = () => {
+          nextTick(() => {
+            const container = document.getElementById('homeMap');
+            if (!container || mapInstance) return;
+
+            mapInstance = L.map('homeMap', {
+              center: [37.550, 127.010],
+              zoom: 12,
+              zoomControl: false
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 18,
+              attribution: '© OpenStreetMap'
+            }).addTo(mapInstance);
+
+            const spots = [
+              { name: '東廟 ARA Hotel', pos: [37.5732, 127.0245] },
+              { name: '聖水洞 / 囕盈豚', pos: [37.5445, 127.0560] },
+              { name: '盤浦漢江彩虹噴泉', pos: [37.5098, 126.9947] },
+              { name: '明洞商圈', pos: [37.5635, 126.9840] },
+              { name: '漢南洞排骨湯', pos: [37.5338, 127.0041] },
+              { name: '龍山解放村', pos: [37.5435, 126.9868] }
+            ];
+
+            spots.forEach(s => {
+              L.marker(s.pos).addTo(mapInstance).bindPopup(`<b>${s.name}</b>`);
+            });
+          });
+        };
+
+        const getMapPreviewUrl = (spot) => {
+          const lat = spot.lat || 37.5665;
+          const lng = spot.lng || 126.9780;
+          return `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.008}%2C${lat-0.005}%2C${lng+0.008}%2C${lat+0.005}&layer=mapnik&marker=${lat}%2C${lng}`;
+        };
+
         onMounted(() => {
-          const savedCart = localStorage.getItem('seoul_2026_cart');
+          const savedItinerary = localStorage.getItem('seoul_2026_itinerary_v7');
+          if (savedItinerary) {
+            try { itineraryData.value = JSON.parse(savedItinerary); } catch (e) {}
+          }
+          const savedCart = localStorage.getItem('seoul_2026_cart_v7');
           if (savedCart) {
             try { shoppingList.value = JSON.parse(savedCart); } catch (e) {}
           }
@@ -935,14 +1252,21 @@
           if (savedExpenses) {
             try { expenses.value = JSON.parse(savedExpenses); } catch (e) {}
           }
-          const savedChecklist = localStorage.getItem('seoul_2026_checklist_v3');
+          const savedChecklist = localStorage.getItem('seoul_2026_checklist_v4');
           if (savedChecklist) {
             try { checklist.value = JSON.parse(savedChecklist); } catch (e) {}
           }
+
+          initHomeMap();
+          setupSortable();
         });
 
+        watch(itineraryData, (val) => {
+          localStorage.setItem('seoul_2026_itinerary_v7', JSON.stringify(val));
+        }, { deep: true });
+
         watch(shoppingList, (val) => {
-          localStorage.setItem('seoul_2026_cart', JSON.stringify(val));
+          localStorage.setItem('seoul_2026_cart_v7', JSON.stringify(val));
         }, { deep: true });
 
         watch(expenses, (val) => {
@@ -950,8 +1274,17 @@
         }, { deep: true });
 
         watch(checklist, (val) => {
-          localStorage.setItem('seoul_2026_checklist_v3', JSON.stringify(val));
+          localStorage.setItem('seoul_2026_checklist_v4', JSON.stringify(val));
         }, { deep: true });
+
+        watch(currentTab, (val) => {
+          if (val === 'HOME') {
+            initHomeMap();
+          } else {
+            isEditMode.value = false;
+            setupSortable();
+          }
+        });
 
         const toggleTask = (index) => {
           checklist.value[index].checked = !checklist.value[index].checked;
@@ -992,303 +1325,84 @@
           document.body.removeChild(link);
         };
 
+        // 3. 每2小時一個時間點的24小時完整天氣數據 (支援左右流暢拖曳)
         const weatherInfo = {
-          DAY0: {
-            city: '台北 ➔ 仁川',
-            temp: '23°C',
-            desc: '夜間微涼 晴朗',
+          DAY0: { 
+            city: '台北 ➔ 仁川', 
+            temp: '23°C', 
+            desc: '夜間微涼 晴朗', 
             hourly: [
-              { time: '21:00', icon: '🌙', temp: '25°' },
+              { time: '18:00', icon: '🌇', temp: '26°' },
+              { time: '20:00', icon: '🌙', temp: '25°' },
+              { time: '22:00', icon: '🌙', temp: '24°' },
               { time: '00:00', icon: '☁️', temp: '23°' },
-              { time: '03:00', icon: '✈️', temp: '20°' },
-              { time: '06:00', icon: '🌅', temp: '18°' }
-            ]
+              { time: '02:00', icon: '✈️', temp: '21°' },
+              { time: '04:00', icon: '✈️', temp: '20°' },
+              { time: '06:00', icon: '🌅', temp: '18°' },
+              { time: '08:00', icon: '☀️', temp: '20°' },
+              { time: '10:00', icon: '🌤️', temp: '22°' },
+              { time: '12:00', icon: '☀️', temp: '24°' },
+              { time: '14:00', icon: '☀️', temp: '25°' },
+              { time: '16:00', icon: '🌤️', temp: '23°' }
+            ] 
           },
-          DAY1: {
-            city: '首爾 (聖水 / 東廟)',
-            temp: '22°C',
-            desc: '秋高氣爽 微風舒適',
+          DAY1: { 
+            city: '首爾 (聖水 / 東廟)', 
+            temp: '22°C', 
+            desc: '秋高氣爽 微風舒適', 
             hourly: [
               { time: '06:00', icon: '🌅', temp: '17°' },
-              { time: '09:00', icon: '☀️', temp: '20°' },
+              { time: '08:00', icon: '☀️', temp: '19°' },
+              { time: '10:00', icon: '☀️', temp: '21°' },
               { time: '12:00', icon: '🌤️', temp: '24°' },
-              { time: '15:00', icon: '🌤️', temp: '25°' },
+              { time: '14:00', icon: '🌤️', temp: '25°' },
+              { time: '16:00', icon: '☀️', temp: '23°' },
               { time: '18:00', icon: '🌇', temp: '21°' },
-              { time: '21:00', icon: '🌙', temp: '18°' }
-            ]
+              { time: '20:00', icon: '🌙', temp: '19°' },
+              { time: '22:00', icon: '🌙', temp: '18°' },
+              { time: '00:00', icon: '☁️', temp: '17°' },
+              { time: '02:00', icon: '☁️', temp: '16°' },
+              { time: '04:00', icon: '🌙', temp: '16°' }
+            ] 
           },
-          DAY2: {
-            city: '首爾 (明洞 / 漢南洞)',
-            temp: '23°C',
-            desc: '晴時多雲 適合徒步',
+          DAY2: { 
+            city: '首爾 (明洞 / 漢南洞)', 
+            temp: '23°C', 
+            desc: '晴時多雲 適合徒步', 
             hourly: [
-              { time: '09:00', icon: '🌤️', temp: '19°' },
+              { time: '06:00', icon: '🌅', temp: '17°' },
+              { time: '08:00', icon: '🌤️', temp: '19°' },
+              { time: '10:00', icon: '☀️', temp: '22°' },
               { time: '12:00', icon: '☀️', temp: '24°' },
-              { time: '15:00', icon: '☀️', temp: '25°' },
+              { time: '14:00', icon: '☀️', temp: '25°' },
+              { time: '16:00', icon: '🌤️', temp: '23°' },
               { time: '18:00', icon: '🌇', temp: '20°' },
-              { time: '21:00', icon: '🌙', temp: '17°' }
-            ]
+              { time: '20:00', icon: '🌙', temp: '19°' },
+              { time: '22:00', icon: '🌙', temp: '17°' },
+              { time: '00:00', icon: '☁️', temp: '16°' },
+              { time: '02:00', icon: '☁️', temp: '15°' },
+              { time: '04:00', icon: '🌙', temp: '15°' }
+            ] 
           },
-          DAY3: {
-            city: '首爾 (龍山 / 梨泰院)',
-            temp: '20°C',
-            desc: '早晚溫差大 備薄外套',
+          DAY3: { 
+            city: '首爾 (龍山 / 梨泰院)', 
+            temp: '20°C', 
+            desc: '早晚溫差大 備薄外套', 
             hourly: [
-              { time: '09:00', icon: '☁️', temp: '18°' },
+              { time: '06:00', icon: '🌅', temp: '16°' },
+              { time: '08:00', icon: '☁️', temp: '18°' },
+              { time: '10:00', icon: '🌤️', temp: '20°' },
               { time: '12:00', icon: '🌤️', temp: '22°' },
-              { time: '15:00', icon: '🌤️', temp: '23°' },
+              { time: '14:00', icon: '🌤️', temp: '23°' },
+              { time: '16:00', icon: '🌤️', temp: '21°' },
               { time: '18:00', icon: '🌇', temp: '19°' },
-              { time: '21:00', icon: '🌙', temp: '16°' }
-            ]
+              { time: '20:00', icon: '🌙', temp: '18°' },
+              { time: '22:00', icon: '🌙', temp: '16°' },
+              { time: '00:00', icon: '☁️', temp: '15°' },
+              { time: '02:00', icon: '🌙', temp: '14°' },
+              { time: '04:00', icon: '🌙', temp: '14°' }
+            ] 
           }
-        };
-
-        const itineraryData = {
-          DAY0: [
-            {
-              time: '21:20',
-              type: 'TRANS',
-              title: '泰山貴和 ➔ 桃園機場 T1',
-              summary: '搭乘機場捷運，車程約35-40分鐘。預辦登機與線上選位已於起飛前24H完成。',
-              tags: [{ text: '起飛前24H線上選位', color: '#805B74' }]
-            },
-            {
-              time: '23:00',
-              type: 'TRANS',
-              title: '桃園機場 T1 辦理出境',
-              summary: '航班 LJ734 (01:25-05:00)。托運行李、安檢出境、候機登機。'
-            }
-          ],
-          DAY1: [
-            {
-              time: '05:00',
-              type: 'TRANS',
-              title: '仁川國際機場 T2 抵達',
-              krTitle: '인천국제공항 제2여객터미널',
-              summary: '入境後前往 B1 星巴克前方自動售票機購買機場巴士 6002 車票 (₩17,000)，直達東廟站。',
-              naverMap: 'https://map.naver.com/v5/search/인천국제공항%20제2여객터미널'
-            },
-            {
-              time: '08:00',
-              type: 'STAY',
-              title: '東廟 ARA Hotel 寄放行李',
-              krTitle: '아라호텔',
-              address: '서울 종로구 난계로29길 60',
-              summary: '抵達飯店先寄放大型行李。入住時間 16:00 後，退房時間 9/21 12:00 前。',
-              confirmCode: 'BOOKING-ARA-919',
-              confirmNote: '預訂憑證已保存在雲端',
-              naverMap: 'https://map.naver.com/v5/search/서울%20종로구%20난계로29길%2060',
-              phone: '02-2234-8888',
-              origin: '東廟是首爾著名的復古跳蚤市場與清溪川交界處，鄰近東大門商圈。',
-              highlight: '交通四通八達，早晨沿清溪川步道散步非常清幽。'
-            },
-            {
-              time: '08:30',
-              type: 'STAY',
-              title: '東廟 SPAREX 汗蒸幕',
-              krTitle: '스파렉스 동묘점',
-              address: '서울 종로구 지봉로 19 13F',
-              summary: '24小時營業。紅眼班機抵達後，先至 13 樓放鬆泡湯補眠充電。',
-              naverMap: 'https://map.naver.com/v5/search/동묘%20스파렉스',
-              tags: [{ text: '必吃 甜米釀+烤蛋', color: '#B5838D' }],
-              origin: '首爾市中心老字號大規模汗蒸幕，具備傳統松木火汗蒸房與遼闊市景。',
-              highlight: '進場領取專屬衣物與毛巾，在大廳地板鋪軟墊小憩，是舒緩紅眼疲累的最高享受。',
-              menu: [
-                { zh: '甜米釀 (甜米露)', kr: '식혜 (Sikhye)' },
-                { zh: '炭烤雞蛋 (3顆)', kr: '구운계란 (3개)' }
-              ]
-            },
-            {
-              time: '12:00',
-              type: 'SHOP',
-              title: '聖水洞 / 首爾林 文創探店',
-              summary: '打卡清單：Dasique Flagship、Miffy Store、Hetras、fwee、NYU NYU、Musinsa Megastore。',
-              address: '서울 성동구 성수이로',
-              naverMap: 'https://map.naver.com/v5/search/성수동',
-              tags: [
-                { text: '必買 Hetras室內擴香', color: '#C99E7A' },
-                { text: 'fwee 布丁唇泥', color: '#B5838D' }
-              ],
-              origin: '早期為首爾製鞋與印刷工廠集散地，近年由獨立設計師與潮流快閃店進駐轉型。',
-              highlight: 'Hetras 飯店香氛與 fwee 現場自選布丁小罐吊飾為高人氣必買伴手禮。'
-            },
-            {
-              time: '17:30',
-              type: 'FOOD',
-              title: '囕盈豚 聖水店',
-              krTitle: '남영돈 성수점',
-              address: '서울 성동구 성수이로16길 32',
-              summary: '首爾三大神級烤豬肉名店之一，以特選椴木炭火直烤與鮮甜多汁聞名。',
-              naverMap: 'https://map.naver.com/v5/search/남영돈%20성수점',
-              phone: '02-793-3598',
-              tags: [
-                { text: '必吃 厚切松坂肉', color: '#B5838D' },
-                { text: '必點 水冷麵', color: '#8EA499' }
-              ],
-              origin: '本店位於南營，因極致口感天天大排長龍，聖水店延續木炭煙燻直火風格。',
-              highlight: '全程專人桌邊代烤，附贈辣拌蔥絲、白泡菜、芥末籽、明太子醬，層次極豐富。',
-              tips: '松坂肉 (항정살) 必點，油花細緻脆彈；搭配冰涼爽口的水冷麵解膩是老饕吃法。',
-              menu: [
-                { zh: '特選豬頸肉 / 松坂肉', kr: '항정살 (Hangjeong-sal)' },
-                { zh: '橫膈膜肉 (海鷗肉)', kr: '갈매기살 (Galmaegi-sal)' },
-                { zh: '爽口水冷麵', kr: '물냉면 (Mul Naengmyeon)' },
-                { zh: '白飯', kr: '공기밥' }
-              ]
-            },
-            {
-              time: '19:30',
-              type: 'SPOT',
-              title: '盤浦漢江公園・月光彩虹噴泉',
-              krTitle: '반포대교 달빛무지개분수',
-              summary: '月光彩虹噴泉表演時間：19:30～21:00（每30分鐘演出一次）。',
-              naverMap: 'https://map.naver.com/v5/search/반포대교%20달빛무지개분수',
-              tags: [{ text: '夜景噴泉水舞秀', color: '#879883' }],
-              origin: '名列金氏世界紀錄最長的橋樑噴泉，全長 1,140 公尺，配備數百個彩色噴嘴。',
-              highlight: '坐在江邊草坪吹風，欣賞盤浦大橋隨音樂變換舞動的彩虹水幕與夜景。'
-            },
-            {
-              time: '21:30',
-              type: 'SHOP',
-              title: '東大門現代 City Outlet & DOOTA',
-              summary: '夜間逛街，享受東大門不夜城的購物魅力。',
-              naverMap: 'https://map.naver.com/v5/search/현대시티아울렛%20동대문점'
-            }
-          ],
-          DAY2: [
-            {
-              time: '10:30',
-              type: 'SHOP',
-              title: '明洞樂天百貨本店',
-              summary: '免稅店與化妝品專櫃巡禮。',
-              naverMap: 'https://map.naver.com/v5/search/롯데백화점%20본점'
-            },
-            {
-              time: '11:45',
-              type: 'SHOP',
-              title: '明洞 NOVA 藥局',
-              krTitle: '노바약국',
-              address: '서울 중구 명동2길 53 1층 103호',
-              summary: '營業時間 11:00-23:00。首爾採買韓系淡斑霜、高單位維他命與保健品人氣藥局。',
-              naverMap: 'https://map.naver.com/v5/search/노바약국%20명동',
-              tags: [{ text: '必買 韓國淡斑去疤膏', color: '#C99E7A' }],
-              menu: [
-                { zh: '請推薦淡斑去疤膏', kr: '흉터치료제 추천해주세요' },
-                { zh: '高劑量綜合維他命', kr: '고함량 종합비타민' }
-              ]
-            },
-            {
-              time: '13:00',
-              type: 'SHOP',
-              title: 'ILKW 漢南旗艦店',
-              summary: '漢南洞潮流質感風格小眾服飾門市。',
-              naverMap: 'https://map.naver.com/v5/search/한남동'
-            },
-            {
-              time: '14:00',
-              type: 'FOOD',
-              title: '漢南洞馬鈴薯排骨湯 本店',
-              krTitle: '한남동 감자탕 본점',
-              address: '서울 용산구 대사관로 73 1층',
-              summary: '眾多韓星與在地居民指定的老字號馬鈴薯排骨湯，濃郁大骨湯底。',
-              naverMap: 'https://map.naver.com/v5/search/한남동%20감자탕%20본점',
-              phone: '02-790-7737',
-              tags: [
-                { text: '必吃 馬鈴薯排骨湯', color: '#B5838D' },
-                { text: '最後必點 炒飯', color: '#C99E7A' }
-              ],
-              origin: '漢南洞三十年老舖，大塊軟爛脊骨搭配鬆軟馬鈴薯與濃香紫蘇葉。',
-              highlight: '排骨輕輕一夾即骨肉分離，蘸上專屬黃芥末醬汁非常開胃。',
-              tips: '肉吃完後鍋底精華務必加點「炒飯 (볶음밥)」，加入香油、紫蘇葉與海苔煎至酥脆鍋巴！',
-              menu: [
-                { zh: '馬鈴薯排骨湯 (小)', kr: '감자탕 (소)' },
-                { zh: '馬鈴薯排骨湯 (中)', kr: '감자탕 (중)' },
-                { zh: '餐後精華炒飯', kr: '볶음밥' },
-                { zh: '加點拉麵麵條', kr: '라면사리' }
-              ]
-            },
-            {
-              time: '15:30',
-              type: 'SHOP',
-              title: '漢南洞設計師品牌巡禮',
-              summary: '逛 LOOKAST、FOLNUA 等韓國高質感設計師服飾與皮件門市。',
-              naverMap: 'https://map.naver.com/v5/search/LOOKAST%20한남'
-            },
-            {
-              time: '17:30',
-              type: 'SPOT',
-              title: '龍山解放村 & 新興市場',
-              krTitle: '용산해방촌 신흥시장',
-              address: '서울 용산구 용산동2가',
-              summary: '傍晚抵達看首爾塔夕陽日落🌇，漫步新興市場文青咖啡廳與露天露台。',
-              naverMap: 'https://map.naver.com/v5/search/용산동2가',
-              tags: [{ text: '夕陽首爾塔打卡秘境', color: '#879883' }],
-              origin: '解放村為依南山山坡而建的歷史街區，新興市場翻新後成為日落觀景勝地。',
-              highlight: '天台露天座位可同時遠眺南山首爾塔與首爾市區壯麗全景。'
-            },
-            {
-              time: '20:00',
-              type: 'SHOP',
-              title: '東大門 mini line',
-              summary: '潮流特色配飾與選品。',
-              naverMap: 'https://map.naver.com/v5/search/동대문'
-            },
-            {
-              time: '21:00',
-              type: 'SHOP',
-              title: 'City Outlet emart 清溪川店',
-              krTitle: '이마트 청계천점',
-              address: '서울 중구 청계천로 400',
-              summary: '韓國零食、泡麵、海苔、果醬大採購，支援現場退稅服務。',
-              naverMap: 'https://map.naver.com/v5/search/이마트%20청계천점',
-              tags: [{ text: '必買伴手禮退稅', color: '#C99E7A' }]
-            }
-          ],
-          DAY3: [
-            {
-              time: '10:30',
-              type: 'SHOP',
-              title: '龍山 I\'Park Mall & 電子商場',
-              summary: '大型綜合購物中心，逛品牌專櫃與生活日用品。',
-              naverMap: 'https://map.naver.com/v5/search/용산%20아이파크몰'
-            },
-            {
-              time: '15:00',
-              type: 'CLINIC',
-              title: 'COMO CLINIC 預約體驗',
-              krTitle: '꼬모의원',
-              address: '서울 용산구 이태원로 237 4층',
-              summary: '預約時間 15:00，預計保留 2 小時。請攜帶護照辦理退稅。',
-              confirmCode: '預約時間 15:00',
-              confirmNote: '預約保留 2 小時，請提前10分鐘到場',
-              naverMap: 'https://map.naver.com/v5/search/꼬모의원',
-              phone: '02-790-0000',
-              tags: [{ text: '預約時間 15:00', color: '#805B74' }],
-              origin: '漢南洞與梨泰院交界的現代皮膚護理與醫美診所，具中文諮詢翻譯服務。',
-              highlight: '隱私性高，施作前後享有獨立休息室與專人鎮定護理。'
-            },
-            {
-              time: '18:00',
-              type: 'TRANS',
-              title: '首爾站 ➔ AREX 直達列車',
-              summary: '搭地鐵至首爾站，換乘 AREX 直達列車直奔仁川機場 T2（車程約 51 分鐘）。',
-              tags: [{ text: '先換好直達車票', color: '#6B8796' }],
-              naverMap: 'https://map.naver.com/v5/search/서울역%20공항철도'
-            },
-            {
-              time: '19:40',
-              type: 'TRANS',
-              title: '仁川機場 T2 免稅品提貨',
-              summary: '提貨處(西側)：225號登機口對面，韓國傳統文化中心(西館)對面搭手扶梯下至2樓。',
-              tags: [{ text: '225號登機口對面2F', color: '#C99E7A' }],
-              highlight: '提領時務必隨身準備好「護照正本」與「登機證」。'
-            },
-            {
-              time: '22:40',
-              type: 'TRANS',
-              title: '仁川國際機場 ➔ 桃園機場',
-              summary: '航班 LJ733 (22:40 - 00:10+1)。滿載戰利品平安返台！'
-            }
-          ]
         };
 
         const openModal = (spot) => {
@@ -1325,12 +1439,21 @@
           showCartModal,
           shoppingList,
           newCartItem,
-          urlPreview,
-          handleUrlDetect,
           addCartItem,
           toggleCartItem,
           deleteCartItem,
-          groupedCart
+          editCartItemPrompt,
+          groupedCart,
+          isEditMode,
+          editingSpot,
+          editingSpotIndex,
+          toggleEditMode,
+          deleteSpot,
+          openAddSpotModal,
+          openEditSpotModal,
+          saveSpotEdit,
+          resetDefaultItinerary,
+          getMapPreviewUrl
         };
       }
     }).mount('#app');
