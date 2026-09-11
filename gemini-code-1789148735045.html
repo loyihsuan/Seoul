@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>SEOUL 2026</title>
+
+  <!-- Google Fonts: Cormorant Garamond, Playfair Display, Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Noto+Sans+TC:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue.js 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            kbg: '#FBFBFA',
+            kborder: 'rgba(231, 229, 228, 0.7)',
+            ksubtext: '#8E8E93',
+            morandi: {
+              food: '#B5838D',     // 莫蘭迪玫瑰褐
+              trans: '#6B8796',    // 莫蘭迪霧霾藍
+              spot: '#879883',     // 莫蘭迪灰綠
+              shop: '#C99E7A',     // 莫蘭迪駝色
+              stay: '#7E7A94',     // 莫蘭迪灰紫
+              clinic: '#8EA499',   // 莫蘭迪鼠尾草
+              dark: '#2E2B2A'
+            }
+          },
+          fontFamily: {
+            serif: ['"Playfair Display"', '"Cormorant Garamond"', 'serif'],
+            sans: ['"Noto Sans TC"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #FBFBFA;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      letter-spacing: -0.01em;
+    }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .app-card {
+      background-color: #FFFFFF;
+      border: 1px solid rgba(231, 229, 228, 0.85);
+      border-radius: 20px;
+      box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+    }
+    
+    .ticket-punch-l {
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      box-shadow: inset -1px 0 0 rgba(0,0,0,0.06);
+    }
+    .ticket-punch-r {
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      box-shadow: inset 1px 0 0 rgba(0,0,0,0.06);
+    }
+
+    /* 原生彈跳抽屜動畫 (Spring-Bounce In) */
+    @keyframes springBounceUp {
+      0% {
+        opacity: 0;
+        transform: translateY(100%) scale(0.96);
+      }
+      65% {
+        opacity: 1;
+        transform: translateY(-8px) scale(1.01);
+      }
+      85% {
+        transform: translateY(3px) scale(0.998);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-bounce-in {
+      animation: springBounceUp 0.42s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+      will-change: transform, opacity;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased text-stone-800 bg-kbg min-h-screen pb-24">
+  <div id="app" class="max-w-md mx-auto relative min-h-screen flex flex-col justify-between">
+    
+    <!-- 頂部 Sticky 導航 -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-5 pt-5 pb-3 border-b border-stone-200 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)]">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl tracking-wider font-serif font-bold text-stone-900 leading-tight">
+            SEOUL 2026
+          </h1>
+          <div class="text-[10.5px] font-serif uppercase tracking-widest text-stone-400 mt-1 font-medium">
+            SEP 19 - SEP 21 · 3 DAYS TRIP
+          </div>
+        </div>
+        
+        <!-- 右側：同色系 Icon 導航按鈕 (帳本 & 資訊) -->
+        <div class="flex items-center gap-1.5">
+          <button 
+            @click="currentTab = (currentTab === 'BOOK' ? 'HOME' : 'BOOK')" 
+            class="w-6 h-6 rounded-full flex items-center justify-center transition-all border shadow-2xs active:scale-95"
+            :class="currentTab === 'BOOK' ? 'bg-stone-900 border-stone-900 text-white' : 'bg-stone-50/80 border-stone-200 text-stone-600 hover:bg-stone-100'"
+            title="旅行帳本"
+          >
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
+              <path d="M16 8h-6m6 4h-6m4 4h-4"/>
+            </svg>
+          </button>
+
+          <button 
+            @click="currentTab = (currentTab === 'INFO' ? 'HOME' : 'INFO')" 
+            class="w-6 h-6 rounded-full flex items-center justify-center transition-all border shadow-2xs active:scale-95"
+            :class="currentTab === 'INFO' ? 'bg-stone-900 border-stone-900 text-white' : 'bg-stone-50/80 border-stone-200 text-stone-600 hover:bg-stone-100'"
+            title="航班與住宿資訊"
+          >
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 水平日期捲軸 (Date Picker Bar) -->
+      <nav class="flex items-center justify-between mt-3 px-1 border-t border-stone-100 pt-2.5">
+        <button 
+          @click="currentTab = 'HOME'"
+          class="flex flex-col items-center justify-between py-1 px-2 relative transition-all group min-w-[48px] h-11"
+        >
+          <div class="flex-1 flex items-center justify-center">
+            <svg 
+              class="w-5 h-5 transition-transform"
+              :class="currentTab === 'HOME' ? 'scale-110 text-stone-900 stroke-[2.2]' : 'text-stone-400 stroke-[1.8]'"
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"
+            >
+              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
+            </svg>
+          </div>
+          <span class="w-1.5 h-1.5 rounded-full transition-all"
+                :class="currentTab === 'HOME' ? 'bg-stone-900 opacity-100 scale-100' : 'bg-transparent opacity-0 scale-50'">
+          </span>
+        </button>
+
+        <button 
+          v-for="day in dayTabs" 
+          :key="day.id"
+          @click="currentTab = day.id"
+          class="flex flex-col items-center justify-between py-1 px-2 relative transition-all group min-w-[48px] h-11"
+        >
+          <div class="flex flex-col items-center justify-center flex-1">
+            <span class="text-[9px] font-serif uppercase tracking-wider transition-colors leading-none"
+                  :class="currentTab === day.id ? 'text-stone-900 font-semibold' : 'text-stone-400'">
+              {{ day.sub }}
+            </span>
+            <span class="text-sm font-serif transition-transform mt-1 leading-none"
+                  :class="currentTab === day.id ? 'font-bold scale-110 text-stone-900' : 'text-stone-400'">
+              {{ day.date }}
+            </span>
+          </div>
+          <span class="w-1.5 h-1.5 rounded-full transition-all"
+                :class="currentTab === day.id ? 'bg-stone-900 opacity-100 scale-100' : 'bg-transparent opacity-0 scale-50'">
+          </span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- 主體內容 -->
+    <main class="px-4.5 pt-4 flex-1">
+
+      <!-- ================= 0. HOME 分頁 ================= -->
+      <section v-if="currentTab === 'HOME'" class="space-y-4">
+        
+        <div class="app-card p-5 relative overflow-hidden">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-serif tracking-widest uppercase bg-stone-100 text-stone-600 mb-2">Seoul Journey</span>
+              <h2 class="text-xl font-serif font-bold text-stone-900">SEOUL TRIP</h2>
+              <p class="text-[11px] text-stone-500 mt-1 leading-relaxed">聖水時尚、漢南美食、盤浦月光彩虹噴泉與清溪川漫步。</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-serif font-bold text-stone-900">3 DAYS</span>
+              <span class="block text-[10px] text-stone-400">09/19–09/21</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-2 mt-4 pt-3.5 border-t border-stone-100 text-xs">
+            <div class="bg-stone-50 p-2.5 rounded-xl border border-stone-100/80">
+              <span class="text-[9px] text-stone-400 uppercase tracking-wide block">FLIGHT (JIN AIR)</span>
+              <span class="font-serif font-bold text-stone-800 mt-0.5 block">LJ734 / LJ733</span>
+            </div>
+            <div class="bg-stone-50 p-2.5 rounded-xl border border-stone-100/80">
+              <span class="text-[9px] text-stone-400 uppercase tracking-wide block">ACCOMMODATION</span>
+              <span class="font-serif font-bold text-stone-800 mt-0.5 block truncate">ARA Hotel 東廟</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 行前確認清單 (Checklist) -->
+        <div class="app-card p-5">
+          <div class="flex items-center justify-between mb-2.5">
+            <div>
+              <span class="text-[9px] font-serif uppercase tracking-widest text-stone-400">Pre-Trip Checklist</span>
+              <h3 class="text-sm font-bold text-stone-800">行前準備與待辦清單</h3>
+            </div>
+            <span class="text-xs font-serif font-bold text-morandi-food">
+              {{ checklist.filter(i => i.checked).length }} / {{ checklist.length }}
+            </span>
+          </div>
+
+          <div class="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden mb-3.5">
+            <div 
+              class="bg-morandi-food h-full transition-all duration-300 rounded-full"
+              :style="{ width: `${(checklist.filter(i => i.checked).length / checklist.length) * 100}%` }"
+            ></div>
+          </div>
+
+          <div class="space-y-2">
+            <div 
+              v-for="(task, idx) in checklist" 
+              :key="idx"
+              @click="toggleTask(idx)"
+              class="flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer"
+              :class="task.checked ? 'bg-stone-50/70 border-stone-100 text-stone-400' : 'bg-white border-stone-200/60 shadow-2xs text-stone-700'"
+            >
+              <div class="flex items-center gap-3">
+                <div 
+                  class="w-4.5 h-4.5 rounded-md border flex items-center justify-center transition-colors"
+                  :class="task.checked ? 'bg-stone-800 border-stone-800 text-white' : 'border-stone-300 bg-white'"
+                >
+                  <span v-if="task.checked" class="text-[10px]">✓</span>
+                </div>
+                <span class="text-xs font-medium" :class="{ 'line-through': task.checked }">{{ task.title }}</span>
+              </div>
+
+              <a 
+                v-if="task.link" 
+                :href="task.link" 
+                target="_blank" 
+                @click.stop
+                class="text-[11px] text-morandi-trans underline font-serif flex items-center gap-0.5"
+              >
+                網址 ↗
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 首頁全行程地圖卡片 -->
+        <div class="app-card p-4">
+          <div class="flex justify-between items-center mb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="text-base">📍</span>
+              <h3 class="text-xs font-bold text-stone-800">首爾全行程地圖檢視</h3>
+            </div>
+            <a href="https://map.naver.com" target="_blank" class="text-xs text-morandi-trans underline font-serif">開啟 NAVER Map</a>
+          </div>
+          <div class="rounded-xl bg-stone-100/90 h-32 relative overflow-hidden flex flex-col items-center justify-center border border-stone-200/60 p-3 text-center">
+            <p class="text-xs font-medium text-stone-700">東大門 ➔ 聖水洞 ➔ 漢南洞 ➔ 龍山區</p>
+            <p class="text-[10px] text-stone-400 mt-1">點擊每日行程卡片均可自動導航至 NAVER MAP 確切坐標</p>
+            <a href="https://map.naver.com/v5/search/서울시" target="_blank" class="mt-2.5 inline-block px-3 py-1 bg-white border border-stone-200 rounded-full text-[10px] font-medium text-stone-700 shadow-2xs">
+              開啟全覽地圖 ↗
+            </a>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= 1. 每日行程分頁 (DAY0 ~ DAY3) ================= -->
+      <section v-if="['DAY0', 'DAY1', 'DAY2', 'DAY3'].includes(currentTab)" class="space-y-4">
+        
+        <!-- 當日 24H 天氣預報卡 -->
+        <div class="app-card p-4">
+          <div class="flex justify-between items-start mb-2.5">
+            <div>
+              <span class="text-[9px] font-serif uppercase tracking-widest text-stone-400">24H Weather Forecast</span>
+              <h3 class="text-xs font-bold text-stone-800 mt-0.5">{{ weatherInfo[currentTab].city }}</h3>
+              <p class="text-[10px] text-stone-500">{{ weatherInfo[currentTab].desc }}</p>
+            </div>
+            <div class="text-right">
+              <span class="text-lg font-serif font-bold text-stone-900">{{ weatherInfo[currentTab].temp }}</span>
+              <span class="block text-[9px] text-stone-400 font-serif">Open-Meteo</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar pt-2 border-t border-stone-100">
+            <div 
+              v-for="(w, idx) in weatherInfo[currentTab].hourly" 
+              :key="idx"
+              class="flex flex-col items-center flex-shrink-0 w-12 py-1.5 rounded-xl bg-stone-50/80 border border-stone-100"
+            >
+              <span class="text-[9px] font-serif text-stone-400">{{ w.time }}</span>
+              <span class="text-base my-1">{{ w.icon }}</span>
+              <span class="text-xs font-serif font-semibold text-stone-700">{{ w.temp }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 每日垂直時間軸行程清單 -->
+        <div class="relative pl-6 space-y-3.5 before:content-[''] before:absolute before:left-[11px] before:top-3 before:bottom-3 before:w-[1.5px] before:bg-stone-200">
+          
+          <div 
+            v-for="(spot, sIdx) in itineraryData[currentTab]" 
+            :key="sIdx"
+            class="relative cursor-pointer group"
+            @click="openModal(spot)"
+          >
+            <div 
+              class="absolute -left-[19px] top-4 w-2.5 h-2.5 rounded-full border-2 border-white shadow-xs transition-transform group-hover:scale-125"
+              :style="{ backgroundColor: getBadgeColor(spot.type) }"
+            ></div>
+
+            <div class="app-card p-4 active:scale-[0.99] transition-transform">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-serif font-semibold text-stone-400">{{ spot.time }}</span>
+                <span 
+                  class="text-[9px] font-serif uppercase tracking-wider px-2 py-0.5 rounded-full font-medium"
+                  :style="{ backgroundColor: getBadgeBg(spot.type), color: getBadgeColor(spot.type) }"
+                >
+                  {{ spot.type }}
+                </span>
+              </div>
+
+              <h4 class="text-sm font-bold text-stone-800 mt-1.5 flex items-center gap-1.5">
+                {{ spot.title }}
+                <span v-if="spot.krTitle" class="text-xs text-stone-400 font-normal">({{ spot.krTitle }})</span>
+              </h4>
+
+              <p v-if="spot.summary" class="text-xs text-stone-500 mt-1 line-clamp-2 leading-relaxed">
+                {{ spot.summary }}
+              </p>
+
+              <div v-if="spot.tags && spot.tags.length" class="flex flex-wrap gap-1.5 mt-2.5">
+                <span 
+                  v-for="(tg, tIdx) in spot.tags" 
+                  :key="tIdx"
+                  class="text-[9px] px-2 py-0.5 rounded-md font-medium text-white shadow-2xs"
+                  :style="{ backgroundColor: tg.color }"
+                >
+                  {{ tg.text }}
+                </span>
+              </div>
+
+              <!-- 底部 MORE 與 NAVER MAP 📍 圖示按鈕 -->
+              <div class="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-[11px]">
+                <span class="text-stone-400 font-serif tracking-wider text-[10px] font-semibold">{{ spot.address || 'MORE' }}</span>
+                <a 
+                  v-if="spot.naverMap" 
+                  :href="spot.naverMap" 
+                  target="_blank" 
+                  @click.stop
+                  class="text-emerald-700 font-medium hover:underline flex items-center gap-1 text-[11px]"
+                >
+                  <span>📍</span> NAVER
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================= 2. 帳本與預算分頁 (Travel Book) ================= -->
+      <section v-if="currentTab === 'BOOK'" class="space-y-4">
+        
+        <div class="app-card p-5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-[9px] font-serif uppercase tracking-widest text-stone-400">Total Expenses</span>
+            <span class="text-[10px] bg-stone-100 px-2 py-0.5 rounded-md text-stone-500">當前匯率：1 TWD ≈ 42 KRW</span>
+          </div>
+
+          <div class="mt-2.5 flex items-baseline gap-2">
+            <span class="text-2xl font-serif font-bold text-stone-900">₩ {{ totalKRW.toLocaleString() }}</span>
+            <span class="text-xs text-stone-400 font-serif">≈ NT$ {{ Math.round(totalKRW / 42).toLocaleString() }}</span>
+          </div>
+
+          <div class="mt-3.5 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
+            <span class="text-stone-500">每人均攤 (以 2 人計)</span>
+            <span class="font-serif font-bold text-morandi-food">
+              NT$ {{ Math.round((totalKRW / 42) / 2).toLocaleString() }}
+            </span>
+          </div>
+        </div>
+
+        <div class="app-card p-4 space-y-2.5">
+          <h3 class="text-xs font-bold text-stone-700 font-serif">新增一筆旅費記錄</h3>
+          <div class="grid grid-cols-3 gap-2 text-xs">
+            <input v-model="newRecord.title" placeholder="項目 (例: 囕盈豚烤肉)" class="col-span-2 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
+            <select v-model="newRecord.category" class="bg-stone-50 border border-stone-200 rounded-xl px-2 py-2 outline-none text-stone-600">
+              <option value="FOOD">餐飲</option>
+              <option value="TRANS">交通</option>
+              <option value="SHOP">購物</option>
+              <option value="STAY">住宿</option>
+              <option value="CLINIC">醫美</option>
+            </select>
+          </div>
+          <div class="flex gap-2 text-xs">
+            <input v-model.number="newRecord.amount" type="number" placeholder="金額 (韓元 ₩)" class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
+            <button @click="appendExpense" class="px-4 py-2 bg-stone-800 text-white rounded-xl active:scale-95 transition">加入記帳</button>
+          </div>
+        </div>
+
+        <!-- 消費明細列表 (支援刪除 ✕) -->
+        <div class="app-card p-4 space-y-2">
+          <div class="flex justify-between items-center mb-1">
+            <h3 class="text-xs font-bold text-stone-700 font-serif">支出明細清單</h3>
+            <button @click="exportCSV" class="text-[11px] text-morandi-trans underline flex items-center gap-1">
+              📤 匯出至 Numbers / CSV
+            </button>
+          </div>
+
+          <div v-if="expenses.length === 0" class="py-6 text-center text-xs text-stone-400">
+            目前尚無支出記錄
+          </div>
+
+          <div 
+            v-for="(rec, rIdx) in expenses" 
+            :key="rIdx" 
+            class="flex items-center justify-between py-2 border-b border-stone-50 last:border-0 text-xs group"
+          >
+            <div class="flex-1 pr-2">
+              <div class="font-medium text-stone-800">{{ rec.title }}</div>
+              <div class="text-[10px] text-stone-400 mt-0.5">{{ rec.date }}・{{ rec.category }}</div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <div class="font-serif font-bold text-stone-800">₩ {{ rec.amount.toLocaleString() }}</div>
+                <div class="text-[10px] text-stone-400 font-serif">NT$ {{ Math.round(rec.amount / 42).toLocaleString() }}</div>
+              </div>
+              
+              <button 
+                @click="removeExpense(rIdx)" 
+                title="刪除此項"
+                class="w-5 h-5 rounded-full bg-stone-100 hover:bg-rose-50 text-stone-400 hover:text-rose-500 flex items-center justify-center transition-colors text-[10px] active:scale-90"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= 3. 重要資訊分頁 (INFO) ================= -->
+      <section v-if="currentTab === 'INFO'" class="space-y-4">
+        <div class="app-card p-5">
+          <h3 class="text-xs font-serif font-bold uppercase tracking-widest text-stone-400 mb-3">✈️ Flight Information</h3>
+          <div class="space-y-2.5 text-xs">
+            <div class="p-3 bg-stone-50 rounded-xl border border-stone-100">
+              <div class="flex justify-between font-serif font-bold text-stone-800">
+                <span>去程 LJ734 (真航空)</span>
+                <span>TPE ➔ ICN (T2)</span>
+              </div>
+              <div class="text-stone-500 mt-1">2026/09/19 (Sat) 01:25 - 05:00</div>
+              <div class="text-[10px] text-stone-400 mt-1">09/18 21:20 泰山貴和站出發往機場捷運報到</div>
+            </div>
+
+            <div class="p-3 bg-stone-50 rounded-xl border border-stone-100">
+              <div class="flex justify-between font-serif font-bold text-stone-800">
+                <span>回程 LJ733 (真航空)</span>
+                <span>ICN (T2) ➔ TPE</span>
+              </div>
+              <div class="text-stone-500 mt-1">2026/09/21 (Mon) 22:40 - 00:10</div>
+              <div class="text-[10px] text-stone-400 mt-1">搭乘 AREX 直達仁川 T2，並於 225 號登機口對面提領免稅品</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-card p-5">
+          <h3 class="text-xs font-serif font-bold uppercase tracking-widest text-stone-400 mb-3">🏨 Hotel & Stay</h3>
+          <div class="p-3 bg-stone-50 rounded-xl border border-stone-100 text-xs space-y-1">
+            <div class="font-bold text-stone-800 text-sm">ARA Hotel / 아라호텔</div>
+            <div class="text-stone-600">地址：서울 종로구 난계로29길 60</div>
+            <div class="text-stone-500 text-[11px]">入住：2026/09/19 16:00 起 ｜ 退房：09/21 12:00 前</div>
+            <div class="pt-2 flex gap-3">
+              <a href="https://map.naver.com/v5/search/서울%20종로구%20난계로29길%2060" target="_blank" class="text-emerald-700 underline text-[11px]">NAVER 導航 ↗</a>
+              <a href="https://www.miricanvas.com/ko/v/13qf7kn" target="_blank" class="text-stone-500 underline text-[11px]">入住憑證備份 ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-card p-5">
+          <h3 class="text-xs font-serif font-bold uppercase tracking-widest text-stone-400 mb-3">🚨 Emergency Support</h3>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <a href="tel:112" class="p-2.5 bg-stone-50 rounded-xl text-center border border-stone-100 active:scale-95 transition">
+              <span class="block text-stone-400 text-[9px]">警察局報警</span>
+              <span class="font-serif font-bold text-stone-800">112</span>
+            </a>
+            <a href="tel:119" class="p-2.5 bg-stone-50 rounded-xl text-center border border-stone-100 active:scale-95 transition">
+              <span class="block text-stone-400 text-[9px]">救護車與急救</span>
+              <span class="font-serif font-bold text-stone-800">119</span>
+            </a>
+            <a href="tel:1330" class="p-2.5 bg-stone-50 rounded-xl text-center border border-stone-100 active:scale-95 transition">
+              <span class="block text-stone-400 text-[9px]">觀光公社中文諮詢</span>
+              <span class="font-serif font-bold text-stone-800">1330</span>
+            </a>
+            <a href="tel:+82-2-399-2767" class="p-2.5 bg-stone-50 rounded-xl text-center border border-stone-100 active:scale-95 transition">
+              <span class="block text-stone-400 text-[9px]">駐韓代表處緊急專線</span>
+              <span class="font-serif font-bold text-stone-800">02-399-2767</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= 🛒 右下角懸浮購物車按鈕 (Cart FAB) ================= -->
+    <div class="fixed bottom-6 right-5 z-40">
+      <button 
+        @click="showCartModal = true" 
+        class="w-13 h-13 rounded-full bg-stone-900 text-white shadow-xl flex items-center justify-center relative active:scale-90 transition-transform border-2 border-white"
+        title="購物清單"
+      >
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="21" r="1"/>
+          <circle cx="19" cy="21" r="1"/>
+          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
+        </svg>
+        
+        <span 
+          v-if="shoppingList.length" 
+          class="absolute -top-1 -right-1 bg-morandi-food text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white"
+        >
+          {{ shoppingList.filter(i => !i.bought).length }}
+        </span>
+      </button>
+    </div>
+
+    <!-- ================= 🛒 購物清單抽屜彈窗 (Shopping Cart Modal - 彈跳效果) ================= -->
+    <div 
+      v-if="showCartModal" 
+      class="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 backdrop-blur-xs transition-opacity duration-300"
+      @click.self="showCartModal = false"
+    >
+      <div class="w-full max-w-md bg-white rounded-t-[28px] max-h-[88vh] overflow-y-auto p-5 pb-9 shadow-2xl relative modal-bounce-in flex flex-col">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+          <div class="flex items-center gap-2">
+            <span class="text-base">🛍️</span>
+            <h2 class="text-base font-serif font-bold text-stone-900">購物清單 (Wishlist)</h2>
+            <span class="text-xs text-stone-400 font-serif">({{ shoppingList.filter(i => i.bought).length }}/{{ shoppingList.length }})</span>
+          </div>
+          <button @click="showCartModal = false" class="w-7 h-7 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center text-xs font-semibold">✕</button>
+        </div>
+
+        <div class="mt-3.5 p-3.5 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-2.5">
+          <div class="text-[11px] font-bold text-stone-700 flex items-center justify-between">
+            <span>貼上商品連結或自訂品名</span>
+            <span class="text-[10px] text-stone-400 font-normal">支援自動帶出預覽</span>
+          </div>
+          
+          <div class="flex gap-2">
+            <input 
+              v-model="newCartItem.urlOrName" 
+              @input="handleUrlDetect"
+              placeholder="貼上網址 (如 Olive Young) 或輸入商品名稱" 
+              class="flex-1 bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs outline-none focus:border-stone-400" 
+            />
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <select v-model="newCartItem.store" class="bg-white border border-stone-200 rounded-xl px-2.5 py-2 text-xs outline-none text-stone-700 col-span-1">
+              <option value="聖水 (Hetras / fwee)">聖水文創</option>
+              <option value="明洞 (Nova藥局 / 樂天)">明洞藥妝</option>
+              <option value="清溪川 (emart 超市)">emart超市</option>
+              <option value="漢南洞 (潮流選品)">漢南服飾</option>
+              <option value="免稅提貨 / 機場">免稅商品</option>
+            </select>
+
+            <input 
+              v-model.number="newCartItem.price" 
+              type="number" 
+              placeholder="預估金額 (₩)" 
+              class="bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs outline-none col-span-1" 
+            />
+
+            <button 
+              @click="addCartItem" 
+              class="bg-stone-900 text-white rounded-xl text-xs font-medium active:scale-95 transition col-span-1"
+            >
+              加入清單
+            </button>
+          </div>
+
+          <div v-if="urlPreview" class="p-2 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center gap-2 text-[11px] text-emerald-800">
+            <span class="text-sm">✨</span>
+            <span class="truncate flex-1">已識別：{{ urlPreview.title }}</span>
+          </div>
+        </div>
+
+        <div class="mt-4 space-y-4 flex-1 overflow-y-auto">
+          <div v-if="Object.keys(groupedCart).length === 0" class="py-12 text-center text-stone-400 text-xs">
+            購物車空空的，快把想買的香氛、唇泥或零食加進來！
+          </div>
+
+          <div v-for="(items, storeName) in groupedCart" :key="storeName" class="space-y-2">
+            <div class="flex items-center justify-between px-1">
+              <span class="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-morandi-shop"></span>
+                {{ storeName }}
+              </span>
+              <span class="text-[10px] text-stone-400 font-serif">
+                {{ items.filter(i => i.bought).length }}/{{ items.length }} 件已購
+              </span>
+            </div>
+
+            <div class="space-y-1.5">
+              <div 
+                v-for="(item, idx) in items" 
+                :key="item.id"
+                class="p-2.5 rounded-xl border flex items-center justify-between transition-all"
+                :class="item.bought ? 'bg-stone-50/70 border-stone-100 text-stone-400' : 'bg-white border-stone-200/80 shadow-2xs text-stone-800'"
+              >
+                <div class="flex items-center gap-2.5 flex-1 min-w-0" @click="toggleCartItem(item.id)">
+                  <div 
+                    class="w-4.5 h-4.5 rounded-md border flex items-center justify-center cursor-pointer transition-colors"
+                    :class="item.bought ? 'bg-stone-800 border-stone-800 text-white' : 'border-stone-300 bg-white'"
+                  >
+                    <span v-if="item.bought" class="text-[10px]">✓</span>
+                  </div>
+
+                  <div class="w-8 h-8 rounded-lg bg-stone-100 border border-stone-200/60 flex items-center justify-center text-sm overflow-hidden shrink-0">
+                    <img v-if="item.thumb" :src="item.thumb" class="w-full h-full object-cover" />
+                    <span v-else>{{ item.icon || '🛍️' }}</span>
+                  </div>
+
+                  <div class="min-w-0 flex-1 cursor-pointer">
+                    <div class="text-xs font-medium truncate" :class="{ 'line-through': item.bought }">
+                      {{ item.title }}
+                    </div>
+                    <div class="text-[10px] text-stone-400 flex items-center gap-2 mt-0.5 font-serif">
+                      <span v-if="item.price">₩ {{ item.price.toLocaleString() }} (約 NT$ {{ Math.round(item.price / 42) }})</span>
+                      <a v-if="item.link" :href="item.link" target="_blank" @click.stop class="text-morandi-trans underline">連結 ↗</a>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  @click="deleteCartItem(item.id)" 
+                  class="w-5 h-5 rounded-full text-stone-300 hover:text-rose-500 flex items-center justify-center text-[11px] ml-2"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= 原生抽屜 / 行程詳情彈窗 (Modal Detail - 彈跳效果) ================= -->
+    <div 
+      v-if="selectedModal" 
+      class="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 backdrop-blur-xs transition-opacity duration-300"
+      @click.self="selectedModal = null"
+    >
+      <div class="w-full max-w-md bg-white rounded-t-[28px] max-h-[88vh] overflow-y-auto p-5 pb-8 shadow-2xl relative modal-bounce-in">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+          <span 
+            class="text-[10px] font-serif uppercase tracking-widest px-2.5 py-0.5 rounded-full font-semibold"
+            :style="{ backgroundColor: getBadgeBg(selectedModal.type), color: getBadgeColor(selectedModal.type) }"
+          >
+            [{{ selectedModal.type }}]
+          </span>
+          <button @click="selectedModal = null" class="w-7 h-7 rounded-full bg-stone-100 text-stone-500 flex items-center justify-center text-xs font-semibold">✕</button>
+        </div>
+
+        <div class="mt-3.5">
+          <h2 class="text-xl font-serif font-bold text-stone-900">{{ selectedModal.title }}</h2>
+          <p v-if="selectedModal.krTitle" class="text-xs text-stone-400 font-serif mt-0.5">{{ selectedModal.krTitle }}</p>
+        </div>
+
+        <!-- 憑證與訂單代號卡 -->
+        <div v-if="selectedModal.confirmCode" class="mt-4 p-4 bg-stone-50 rounded-2xl border border-dashed border-stone-300 relative overflow-hidden">
+          <div class="ticket-punch-l"></div>
+          <div class="ticket-punch-r"></div>
+          <div class="flex items-center justify-between pl-1 pr-1">
+            <div>
+              <span class="text-[9px] font-serif uppercase tracking-widest text-stone-400 block">Reservation Code</span>
+              <span class="text-base font-serif font-bold text-stone-800 tracking-wider">{{ selectedModal.confirmCode }}</span>
+              <span class="text-[10px] text-stone-400 block mt-0.5">{{ selectedModal.confirmNote || '請出示畫面給櫃檯確認' }}</span>
+            </div>
+            <button @click="copyText(selectedModal.confirmCode)" class="px-2.5 py-1 text-[10px] bg-white border border-stone-200 rounded-lg text-stone-600 active:scale-95 shadow-2xs">
+              {{ copyStatus ? '已複製！' : '複製代號' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 指差點餐區塊 -->
+        <div v-if="selectedModal.menu && selectedModal.menu.length" class="mt-4 p-4 bg-[#FAF8F5] rounded-2xl border border-stone-200/70">
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="text-xs font-bold text-morandi-food flex items-center gap-1">
+              <span>👉</span> 指差點餐（Point & Speak）
+            </span>
+            <span class="text-[10px] text-stone-400">直接出示手機螢幕</span>
+          </div>
+
+          <div class="space-y-2 divide-y divide-stone-200/60">
+            <div 
+              v-for="(item, mIdx) in selectedModal.menu" 
+              :key="mIdx"
+              class="pt-2 first:pt-0 flex items-center justify-between text-xs"
+            >
+              <span class="text-stone-700 font-medium">{{ item.zh }}</span>
+              <span class="bg-white px-2.5 py-1 rounded-lg border border-stone-200/60 font-medium text-stone-900 shadow-2xs">
+                {{ item.kr }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 電話導航卡 (改為 📍 圖示) -->
+        <div class="mt-4 flex gap-2">
+          <a 
+            :href="selectedModal.naverMap || 'https://map.naver.com'" 
+            target="_blank" 
+            class="flex-1 py-3 bg-emerald-700 text-white rounded-xl text-xs font-medium text-center shadow-xs flex items-center justify-center gap-1.5 active:scale-98 transition"
+          >
+            <span>📍</span> 開啟 NAVER MAP 導航
+          </a>
+          <a 
+            v-if="selectedModal.phone" 
+            :href="'tel:' + selectedModal.phone" 
+            class="px-4 py-3 bg-stone-100 text-stone-800 rounded-xl text-xs font-serif font-bold flex items-center justify-center gap-1 active:scale-98 transition"
+          >
+            <span>📞</span> {{ selectedModal.phone }}
+          </a>
+        </div>
+
+        <!-- 故事與深度攻略專區：ABOUT、NOTES 與 TIPS -->
+        <div class="mt-4 space-y-3 text-xs leading-relaxed text-stone-600 bg-stone-50/70 p-4 rounded-2xl border border-stone-100">
+          <div v-if="selectedModal.origin">
+            <span class="font-bold font-serif uppercase tracking-wider text-stone-800 block mb-0.5">【ABOUT】</span>
+            <p>{{ selectedModal.origin }}</p>
+          </div>
+          <div v-if="selectedModal.highlight">
+            <span class="font-bold font-serif uppercase tracking-wider text-stone-800 block mb-0.5">【NOTES】</span>
+            <p>{{ selectedModal.highlight }}</p>
+          </div>
+          <div v-if="selectedModal.tips">
+            <span class="font-bold font-serif uppercase tracking-wider text-stone-800 block mb-0.5">【TIPS】</span>
+            <p>{{ selectedModal.tips }}</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+      setup() {
+        const currentTab = ref('HOME');
+        const selectedModal = ref(null);
+        const showCartModal = ref(false);
+        const copyStatus = ref(false);
+
+        const dayTabs = [
+          { id: 'DAY0', sub: 'FRI', date: '18' },
+          { id: 'DAY1', sub: 'SAT', date: '19' },
+          { id: 'DAY2', sub: 'SUN', date: '20' },
+          { id: 'DAY3', sub: 'MON', date: '21' },
+        ];
+
+        const colors = {
+          FOOD: '#B5838D',
+          TRANS: '#6B8796',
+          SPOT: '#879883',
+          SHOP: '#C99E7A',
+          STAY: '#7E7A94',
+          CLINIC: '#8EA499'
+        };
+
+        const getBadgeColor = (type) => colors[type] || '#8E8E93';
+        const getBadgeBg = (type) => `${colors[type] || '#8E8E93'}18`;
+
+        // 行前準備與代辦清單
+        const defaultChecklist = [
+          { title: '預約機場接送 (9/15 10:00)', link: '', checked: false },
+          { title: '預辦登機/選位 (9/18 01:25)', link: 'https://www.jinair.com/', checked: false },
+          { title: '電子入境卡 (e-Arrival Card)', link: 'https://www.visa.go.kr/', checked: false },
+          { title: 'SES', link: 'https://www.hikorea.go.kr/', checked: false },
+          { title: 'ICN SMART PASS', link: '', checked: false },
+          { title: 'Link Korea 韓國eSIM', link: 'https://www.linkkorea.co.kr/', checked: false },
+          { title: 'STUDIO A 韓國eSIM', link: 'https://www.studioa.com.tw/', checked: false },
+          { title: '仁川機場領T-money', link: '', checked: false },
+          { title: '機場巴士、AREX 車票', link: 'https://www.airportrailroad.com/', checked: false },
+          { title: '護照', link: '', checked: false },
+          { title: '轉接頭', link: '', checked: false }
+        ];
+        const checklist = ref(defaultChecklist);
+
+        // 記帳資料庫
+        const defaultExpenses = [
+          { title: '機場巴士 6002 (2人)', category: 'TRANS', amount: 34000, date: '09/19' },
+          { title: '東廟 SPAREX 汗蒸幕入場 (2人)', category: 'STAY', amount: 30000, date: '09/19' },
+          { title: '囕盈豚 烤肉晚餐', category: 'FOOD', amount: 84000, date: '09/19' },
+          { title: '漢南洞馬鈴薯排骨湯', category: 'FOOD', amount: 48000, date: '09/20' },
+          { title: '清溪川 e-mart 零食採購', category: 'SHOP', amount: 92000, date: '09/20' },
+          { title: 'AREX 機場快線直達票 (2人)', category: 'TRANS', amount: 22000, date: '09/21' }
+        ];
+        const expenses = ref(defaultExpenses);
+        const newRecord = ref({ title: '', category: 'FOOD', amount: null });
+
+        // 購物清單系統
+        const defaultShoppingList = [
+          { id: 1, title: 'Hetras 飯店香氛擴香瓶 (No.7 濟州椴木)', store: '聖水 (Hetras / fwee)', price: 18900, icon: '🌿', link: 'https://hetras.kr', bought: false },
+          { id: 2, title: 'fwee 經典布丁唇泥 + 鑰匙扣小布丁', store: '聖水 (Hetras / fwee)', price: 17000, icon: '💄', link: 'https://fwee.kr', bought: false },
+          { id: 3, title: '東亞製藥 諾斯卡納淡斑去疤膏', store: '明洞 (Nova藥局 / 樂天)', price: 20000, icon: '💊', link: '', bought: false },
+          { id: 4, title: '正官庄 高麗蔘精隨身包', store: '明洞 (Nova藥局 / 樂天)', price: 65000, icon: '🪵', link: '', bought: false },
+          { id: 5, title: 'Market O 布朗尼蛋糕 & 海苔禮盒', store: '清溪川 (emart 超市)', price: 24000, icon: '🍫', link: '', bought: false },
+          { id: 6, title: 'LOOKAST 針織開衫 / 毛衣外套', store: '漢南洞 (潮流選品)', price: 118000, icon: '🧥', link: '', bought: false }
+        ];
+        const shoppingList = ref(defaultShoppingList);
+
+        const newCartItem = ref({ urlOrName: '', store: '聖水 (Hetras / fwee)', price: null });
+        const urlPreview = ref(null);
+
+        const handleUrlDetect = () => {
+          const val = newCartItem.value.urlOrName.trim();
+          if (val.startsWith('http://') || val.startsWith('https://')) {
+            try {
+              const parsed = new URL(val);
+              let inferredTitle = '線上選品 (點擊連結查看)';
+              let inferredStore = newCartItem.value.store;
+              let inferredIcon = '🔗';
+
+              if (parsed.hostname.includes('oliveyoung')) {
+                inferredTitle = 'Olive Young 人氣商品';
+                inferredStore = '明洞 (Nova藥局 / 樂天)';
+                inferredIcon = '🧴';
+              } else if (parsed.hostname.includes('hetras') || parsed.hostname.includes('fwee')) {
+                inferredTitle = '聖水洞專櫃美妝香氛';
+                inferredStore = '聖水 (Hetras / fwee)';
+                inferredIcon = '💄';
+              } else if (parsed.hostname.includes('musinsa') || parsed.hostname.includes('29cm')) {
+                inferredTitle = '韓國設計師潮流單品';
+                inferredStore = '漢南洞 (潮流選品)';
+                inferredIcon = '✨';
+              }
+
+              urlPreview.value = { title: inferredTitle, link: val, store: inferredStore, icon: inferredIcon };
+              newCartItem.value.store = inferredStore;
+            } catch (e) {
+              urlPreview.value = null;
+            }
+          } else {
+            urlPreview.value = null;
+          }
+        };
+
+        const addCartItem = () => {
+          if (!newCartItem.value.urlOrName) return;
+          const isUrl = newCartItem.value.urlOrName.startsWith('http');
+          
+          shoppingList.value.unshift({
+            id: Date.now(),
+            title: isUrl && urlPreview.value ? urlPreview.value.title : newCartItem.value.urlOrName,
+            store: newCartItem.value.store,
+            price: newCartItem.value.price || 0,
+            link: isUrl ? newCartItem.value.urlOrName : '',
+            icon: isUrl ? (urlPreview.value?.icon || '🛍️') : '🛍️',
+            bought: false
+          });
+
+          newCartItem.value.urlOrName = '';
+          newCartItem.value.price = null;
+          urlPreview.value = null;
+        };
+
+        const toggleCartItem = (id) => {
+          const item = shoppingList.value.find(i => i.id === id);
+          if (item) item.bought = !item.bought;
+        };
+
+        const deleteCartItem = (id) => {
+          shoppingList.value = shoppingList.value.filter(i => i.id !== id);
+        };
+
+        const groupedCart = computed(() => {
+          const groups = {};
+          shoppingList.value.forEach(item => {
+            if (!groups[item.store]) groups[item.store] = [];
+            groups[item.store].push(item);
+          });
+          return groups;
+        });
+
+        onMounted(() => {
+          const savedCart = localStorage.getItem('seoul_2026_cart');
+          if (savedCart) {
+            try { shoppingList.value = JSON.parse(savedCart); } catch (e) {}
+          }
+          const savedExpenses = localStorage.getItem('seoul_2026_expenses');
+          if (savedExpenses) {
+            try { expenses.value = JSON.parse(savedExpenses); } catch (e) {}
+          }
+          const savedChecklist = localStorage.getItem('seoul_2026_checklist_v3');
+          if (savedChecklist) {
+            try { checklist.value = JSON.parse(savedChecklist); } catch (e) {}
+          }
+        });
+
+        watch(shoppingList, (val) => {
+          localStorage.setItem('seoul_2026_cart', JSON.stringify(val));
+        }, { deep: true });
+
+        watch(expenses, (val) => {
+          localStorage.setItem('seoul_2026_expenses', JSON.stringify(val));
+        }, { deep: true });
+
+        watch(checklist, (val) => {
+          localStorage.setItem('seoul_2026_checklist_v3', JSON.stringify(val));
+        }, { deep: true });
+
+        const toggleTask = (index) => {
+          checklist.value[index].checked = !checklist.value[index].checked;
+        };
+
+        const totalKRW = computed(() => {
+          return expenses.value.reduce((sum, item) => sum + (item.amount || 0), 0);
+        });
+
+        const appendExpense = () => {
+          if (!newRecord.value.title || !newRecord.value.amount) return;
+          expenses.value.unshift({
+            title: newRecord.value.title,
+            category: newRecord.value.category,
+            amount: newRecord.value.amount,
+            date: '09/19'
+          });
+          newRecord.value.title = '';
+          newRecord.value.amount = null;
+        };
+
+        const removeExpense = (index) => {
+          expenses.value.splice(index, 1);
+        };
+
+        const exportCSV = () => {
+          let csv = "data:text/csv;charset=utf-8,\uFEFF";
+          csv += "日期,類別,項目名稱,金額(KRW),約當台幣(TWD)\n";
+          expenses.value.forEach(row => {
+            csv += `${row.date},${row.category},"${row.title}",${row.amount},${Math.round(row.amount / 42)}\n`;
+          });
+          const uri = encodeURI(csv);
+          const link = document.createElement("a");
+          link.setAttribute("href", uri);
+          link.setAttribute("download", `SEOUL_2026_TRIP_EXPENSES.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        const weatherInfo = {
+          DAY0: {
+            city: '台北 ➔ 仁川',
+            temp: '23°C',
+            desc: '夜間微涼 晴朗',
+            hourly: [
+              { time: '21:00', icon: '🌙', temp: '25°' },
+              { time: '00:00', icon: '☁️', temp: '23°' },
+              { time: '03:00', icon: '✈️', temp: '20°' },
+              { time: '06:00', icon: '🌅', temp: '18°' }
+            ]
+          },
+          DAY1: {
+            city: '首爾 (聖水 / 東廟)',
+            temp: '22°C',
+            desc: '秋高氣爽 微風舒適',
+            hourly: [
+              { time: '06:00', icon: '🌅', temp: '17°' },
+              { time: '09:00', icon: '☀️', temp: '20°' },
+              { time: '12:00', icon: '🌤️', temp: '24°' },
+              { time: '15:00', icon: '🌤️', temp: '25°' },
+              { time: '18:00', icon: '🌇', temp: '21°' },
+              { time: '21:00', icon: '🌙', temp: '18°' }
+            ]
+          },
+          DAY2: {
+            city: '首爾 (明洞 / 漢南洞)',
+            temp: '23°C',
+            desc: '晴時多雲 適合徒步',
+            hourly: [
+              { time: '09:00', icon: '🌤️', temp: '19°' },
+              { time: '12:00', icon: '☀️', temp: '24°' },
+              { time: '15:00', icon: '☀️', temp: '25°' },
+              { time: '18:00', icon: '🌇', temp: '20°' },
+              { time: '21:00', icon: '🌙', temp: '17°' }
+            ]
+          },
+          DAY3: {
+            city: '首爾 (龍山 / 梨泰院)',
+            temp: '20°C',
+            desc: '早晚溫差大 備薄外套',
+            hourly: [
+              { time: '09:00', icon: '☁️', temp: '18°' },
+              { time: '12:00', icon: '🌤️', temp: '22°' },
+              { time: '15:00', icon: '🌤️', temp: '23°' },
+              { time: '18:00', icon: '🌇', temp: '19°' },
+              { time: '21:00', icon: '🌙', temp: '16°' }
+            ]
+          }
+        };
+
+        const itineraryData = {
+          DAY0: [
+            {
+              time: '21:20',
+              type: 'TRANS',
+              title: '泰山貴和 ➔ 桃園機場 T1',
+              summary: '搭乘機場捷運，車程約35-40分鐘。預辦登機與線上選位已於起飛前24H完成。',
+              tags: [{ text: '起飛前24H線上選位', color: '#805B74' }]
+            },
+            {
+              time: '23:00',
+              type: 'TRANS',
+              title: '桃園機場 T1 辦理出境',
+              summary: '航班 LJ734 (01:25-05:00)。托運行李、安檢出境、候機登機。'
+            }
+          ],
+          DAY1: [
+            {
+              time: '05:00',
+              type: 'TRANS',
+              title: '仁川國際機場 T2 抵達',
+              krTitle: '인천국제공항 제2여객터미널',
+              summary: '入境後前往 B1 星巴克前方自動售票機購買機場巴士 6002 車票 (₩17,000)，直達東廟站。',
+              naverMap: 'https://map.naver.com/v5/search/인천국제공항%20제2여객터미널'
+            },
+            {
+              time: '08:00',
+              type: 'STAY',
+              title: '東廟 ARA Hotel 寄放行李',
+              krTitle: '아라호텔',
+              address: '서울 종로구 난계로29길 60',
+              summary: '抵達飯店先寄放大型行李。入住時間 16:00 後，退房時間 9/21 12:00 前。',
+              confirmCode: 'BOOKING-ARA-919',
+              confirmNote: '預訂憑證已保存在雲端',
+              naverMap: 'https://map.naver.com/v5/search/서울%20종로구%20난계로29길%2060',
+              phone: '02-2234-8888',
+              origin: '東廟是首爾著名的復古跳蚤市場與清溪川交界處，鄰近東大門商圈。',
+              highlight: '交通四通八達，早晨沿清溪川步道散步非常清幽。'
+            },
+            {
+              time: '08:30',
+              type: 'STAY',
+              title: '東廟 SPAREX 汗蒸幕',
+              krTitle: '스파렉스 동묘점',
+              address: '서울 종로구 지봉로 19 13F',
+              summary: '24小時營業。紅眼班機抵達後，先至 13 樓放鬆泡湯補眠充電。',
+              naverMap: 'https://map.naver.com/v5/search/동묘%20스파렉스',
+              tags: [{ text: '必吃 甜米釀+烤蛋', color: '#B5838D' }],
+              origin: '首爾市中心老字號大規模汗蒸幕，具備傳統松木火汗蒸房與遼闊市景。',
+              highlight: '進場領取專屬衣物與毛巾，在大廳地板鋪軟墊小憩，是舒緩紅眼疲累的最高享受。',
+              menu: [
+                { zh: '甜米釀 (甜米露)', kr: '식혜 (Sikhye)' },
+                { zh: '炭烤雞蛋 (3顆)', kr: '구운계란 (3개)' }
+              ]
+            },
+            {
+              time: '12:00',
+              type: 'SHOP',
+              title: '聖水洞 / 首爾林 文創探店',
+              summary: '打卡清單：Dasique Flagship、Miffy Store、Hetras、fwee、NYU NYU、Musinsa Megastore。',
+              address: '서울 성동구 성수이로',
+              naverMap: 'https://map.naver.com/v5/search/성수동',
+              tags: [
+                { text: '必買 Hetras室內擴香', color: '#C99E7A' },
+                { text: 'fwee 布丁唇泥', color: '#B5838D' }
+              ],
+              origin: '早期為首爾製鞋與印刷工廠集散地，近年由獨立設計師與潮流快閃店進駐轉型。',
+              highlight: 'Hetras 飯店香氛與 fwee 現場自選布丁小罐吊飾為高人氣必買伴手禮。'
+            },
+            {
+              time: '17:30',
+              type: 'FOOD',
+              title: '囕盈豚 聖水店',
+              krTitle: '남영돈 성수점',
+              address: '서울 성동구 성수이로16길 32',
+              summary: '首爾三大神級烤豬肉名店之一，以特選椴木炭火直烤與鮮甜多汁聞名。',
+              naverMap: 'https://map.naver.com/v5/search/남영돈%20성수점',
+              phone: '02-793-3598',
+              tags: [
+                { text: '必吃 厚切松坂肉', color: '#B5838D' },
+                { text: '必點 水冷麵', color: '#8EA499' }
+              ],
+              origin: '本店位於南營，因極致口感天天大排長龍，聖水店延續木炭煙燻直火風格。',
+              highlight: '全程專人桌邊代烤，附贈辣拌蔥絲、白泡菜、芥末籽、明太子醬，層次極豐富。',
+              tips: '松坂肉 (항정살) 必點，油花細緻脆彈；搭配冰涼爽口的水冷麵解膩是老饕吃法。',
+              menu: [
+                { zh: '特選豬頸肉 / 松坂肉', kr: '항정살 (Hangjeong-sal)' },
+                { zh: '橫膈膜肉 (海鷗肉)', kr: '갈매기살 (Galmaegi-sal)' },
+                { zh: '爽口水冷麵', kr: '물냉면 (Mul Naengmyeon)' },
+                { zh: '白飯', kr: '공기밥' }
+              ]
+            },
+            {
+              time: '19:30',
+              type: 'SPOT',
+              title: '盤浦漢江公園・月光彩虹噴泉',
+              krTitle: '반포대교 달빛무지개분수',
+              summary: '月光彩虹噴泉表演時間：19:30～21:00（每30分鐘演出一次）。',
+              naverMap: 'https://map.naver.com/v5/search/반포대교%20달빛무지개분수',
+              tags: [{ text: '夜景噴泉水舞秀', color: '#879883' }],
+              origin: '名列金氏世界紀錄最長的橋樑噴泉，全長 1,140 公尺，配備數百個彩色噴嘴。',
+              highlight: '坐在江邊草坪吹風，欣賞盤浦大橋隨音樂變換舞動的彩虹水幕與夜景。'
+            },
+            {
+              time: '21:30',
+              type: 'SHOP',
+              title: '東大門現代 City Outlet & DOOTA',
+              summary: '夜間逛街，享受東大門不夜城的購物魅力。',
+              naverMap: 'https://map.naver.com/v5/search/현대시티아울렛%20동대문점'
+            }
+          ],
+          DAY2: [
+            {
+              time: '10:30',
+              type: 'SHOP',
+              title: '明洞樂天百貨本店',
+              summary: '免稅店與化妝品專櫃巡禮。',
+              naverMap: 'https://map.naver.com/v5/search/롯데백화점%20본점'
+            },
+            {
+              time: '11:45',
+              type: 'SHOP',
+              title: '明洞 NOVA 藥局',
+              krTitle: '노바약국',
+              address: '서울 중구 명동2길 53 1층 103호',
+              summary: '營業時間 11:00-23:00。首爾採買韓系淡斑霜、高單位維他命與保健品人氣藥局。',
+              naverMap: 'https://map.naver.com/v5/search/노바약국%20명동',
+              tags: [{ text: '必買 韓國淡斑去疤膏', color: '#C99E7A' }],
+              menu: [
+                { zh: '請推薦淡斑去疤膏', kr: '흉터치료제 추천해주세요' },
+                { zh: '高劑量綜合維他命', kr: '고함량 종합비타민' }
+              ]
+            },
+            {
+              time: '13:00',
+              type: 'SHOP',
+              title: 'ILKW 漢南旗艦店',
+              summary: '漢南洞潮流質感風格小眾服飾門市。',
+              naverMap: 'https://map.naver.com/v5/search/한남동'
+            },
+            {
+              time: '14:00',
+              type: 'FOOD',
+              title: '漢南洞馬鈴薯排骨湯 本店',
+              krTitle: '한남동 감자탕 본점',
+              address: '서울 용산구 대사관로 73 1층',
+              summary: '眾多韓星與在地居民指定的老字號馬鈴薯排骨湯，濃郁大骨湯底。',
+              naverMap: 'https://map.naver.com/v5/search/한남동%20감자탕%20본점',
+              phone: '02-790-7737',
+              tags: [
+                { text: '必吃 馬鈴薯排骨湯', color: '#B5838D' },
+                { text: '最後必點 炒飯', color: '#C99E7A' }
+              ],
+              origin: '漢南洞三十年老舖，大塊軟爛脊骨搭配鬆軟馬鈴薯與濃香紫蘇葉。',
+              highlight: '排骨輕輕一夾即骨肉分離，蘸上專屬黃芥末醬汁非常開胃。',
+              tips: '肉吃完後鍋底精華務必加點「炒飯 (볶음밥)」，加入香油、紫蘇葉與海苔煎至酥脆鍋巴！',
+              menu: [
+                { zh: '馬鈴薯排骨湯 (小)', kr: '감자탕 (소)' },
+                { zh: '馬鈴薯排骨湯 (中)', kr: '감자탕 (중)' },
+                { zh: '餐後精華炒飯', kr: '볶음밥' },
+                { zh: '加點拉麵麵條', kr: '라면사리' }
+              ]
+            },
+            {
+              time: '15:30',
+              type: 'SHOP',
+              title: '漢南洞設計師品牌巡禮',
+              summary: '逛 LOOKAST、FOLNUA 等韓國高質感設計師服飾與皮件門市。',
+              naverMap: 'https://map.naver.com/v5/search/LOOKAST%20한남'
+            },
+            {
+              time: '17:30',
+              type: 'SPOT',
+              title: '龍山解放村 & 新興市場',
+              krTitle: '용산해방촌 신흥시장',
+              address: '서울 용산구 용산동2가',
+              summary: '傍晚抵達看首爾塔夕陽日落🌇，漫步新興市場文青咖啡廳與露天露台。',
+              naverMap: 'https://map.naver.com/v5/search/용산동2가',
+              tags: [{ text: '夕陽首爾塔打卡秘境', color: '#879883' }],
+              origin: '解放村為依南山山坡而建的歷史街區，新興市場翻新後成為日落觀景勝地。',
+              highlight: '天台露天座位可同時遠眺南山首爾塔與首爾市區壯麗全景。'
+            },
+            {
+              time: '20:00',
+              type: 'SHOP',
+              title: '東大門 mini line',
+              summary: '潮流特色配飾與選品。',
+              naverMap: 'https://map.naver.com/v5/search/동대문'
+            },
+            {
+              time: '21:00',
+              type: 'SHOP',
+              title: 'City Outlet emart 清溪川店',
+              krTitle: '이마트 청계천점',
+              address: '서울 중구 청계천로 400',
+              summary: '韓國零食、泡麵、海苔、果醬大採購，支援現場退稅服務。',
+              naverMap: 'https://map.naver.com/v5/search/이마트%20청계천점',
+              tags: [{ text: '必買伴手禮退稅', color: '#C99E7A' }]
+            }
+          ],
+          DAY3: [
+            {
+              time: '10:30',
+              type: 'SHOP',
+              title: '龍山 I\'Park Mall & 電子商場',
+              summary: '大型綜合購物中心，逛品牌專櫃與生活日用品。',
+              naverMap: 'https://map.naver.com/v5/search/용산%20아이파크몰'
+            },
+            {
+              time: '15:00',
+              type: 'CLINIC',
+              title: 'COMO CLINIC 預約體驗',
+              krTitle: '꼬모의원',
+              address: '서울 용산구 이태원로 237 4층',
+              summary: '預約時間 15:00，預計保留 2 小時。請攜帶護照辦理退稅。',
+              confirmCode: '預約時間 15:00',
+              confirmNote: '預約保留 2 小時，請提前10分鐘到場',
+              naverMap: 'https://map.naver.com/v5/search/꼬모의원',
+              phone: '02-790-0000',
+              tags: [{ text: '預約時間 15:00', color: '#805B74' }],
+              origin: '漢南洞與梨泰院交界的現代皮膚護理與醫美診所，具中文諮詢翻譯服務。',
+              highlight: '隱私性高，施作前後享有獨立休息室與專人鎮定護理。'
+            },
+            {
+              time: '18:00',
+              type: 'TRANS',
+              title: '首爾站 ➔ AREX 直達列車',
+              summary: '搭地鐵至首爾站，換乘 AREX 直達列車直奔仁川機場 T2（車程約 51 分鐘）。',
+              tags: [{ text: '先換好直達車票', color: '#6B8796' }],
+              naverMap: 'https://map.naver.com/v5/search/서울역%20공항철도'
+            },
+            {
+              time: '19:40',
+              type: 'TRANS',
+              title: '仁川機場 T2 免稅品提貨',
+              summary: '提貨處(西側)：225號登機口對面，韓國傳統文化中心(西館)對面搭手扶梯下至2樓。',
+              tags: [{ text: '225號登機口對面2F', color: '#C99E7A' }],
+              highlight: '提領時務必隨身準備好「護照正本」與「登機證」。'
+            },
+            {
+              time: '22:40',
+              type: 'TRANS',
+              title: '仁川國際機場 ➔ 桃園機場',
+              summary: '航班 LJ733 (22:40 - 00:10+1)。滿載戰利品平安返台！'
+            }
+          ]
+        };
+
+        const openModal = (spot) => {
+          selectedModal.value = spot;
+          copyStatus.value = false;
+        };
+
+        const copyText = (text) => {
+          navigator.clipboard.writeText(text).then(() => {
+            copyStatus.value = true;
+            setTimeout(() => { copyStatus.value = false; }, 2000);
+          });
+        };
+
+        return {
+          currentTab,
+          dayTabs,
+          checklist,
+          toggleTask,
+          weatherInfo,
+          itineraryData,
+          selectedModal,
+          copyStatus,
+          expenses,
+          newRecord,
+          totalKRW,
+          appendExpense,
+          removeExpense,
+          exportCSV,
+          openModal,
+          copyText,
+          getBadgeColor,
+          getBadgeBg,
+          showCartModal,
+          shoppingList,
+          newCartItem,
+          urlPreview,
+          handleUrlDetect,
+          addCartItem,
+          toggleCartItem,
+          deleteCartItem,
+          groupedCart
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
