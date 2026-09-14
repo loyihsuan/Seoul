@@ -118,16 +118,16 @@
     <!-- 頂部 Sticky 導航 -->
     <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md px-3 sm:px-5 pt-4 pb-2.5 border-b border-stone-200 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.06)] w-full">
       <div class="relative flex items-center justify-between">
-        <!-- 左側三條線 Icon (縮小、無邊框) -->
-        <button @click="isEditMode = !isEditMode" class="text-stone-700 p-1 active:scale-95 transition" title="切換編輯模式">
-          <svg class="w-5 h-5 stroke-[1.8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <!-- 左側編輯按鈕 -->
+        <button @click="isEditMode = !isEditMode" class="text-stone-800 p-1 active:scale-95 transition" title="切換編輯模式">
+          <svg class="w-6 h-6 stroke-[1.8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="12" x2="21" y2="12"></line>
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
 
-        <!-- 正中間標題 "SEOUL 2026" -->
+        <!-- 正中間標題 "SEOUL 2026" (字體大小改為與 Home 頁面 SEOL TRIP 一樣大) -->
         <div class="text-center absolute left-1/2 transform -translate-x-1/2">
           <h1 class="text-xl font-serif font-bold text-stone-900 tracking-wider uppercase" style="font-family: 'Playfair Display', serif;">
             SEOUL 2026
@@ -179,7 +179,7 @@
     <!-- 主體內容 -->
     <main class="w-full px-0.5 sm:px-4.5 pt-4 flex-1">
 
-      <!-- ================= 0. HOME 分頁 (預設主畫面) ================= -->
+      <!-- ================= 0. HOME 分頁 ================= -->
       <section v-if="currentTab === 'HOME'" class="space-y-4 w-full">
         <div class="app-card p-5 relative overflow-hidden w-full">
           <div class="flex justify-between items-start">
@@ -206,107 +206,88 @@
           </div>
         </div>
 
-        <!-- 行前確認清單 (附帶進度條、打勾刪除線與進階網址 Icon) -->
-        <div class="app-card p-5 w-full space-y-3">
-          <div class="flex items-center justify-between">
+        <!-- 行前確認清單 -->
+        <div class="app-card p-5 w-full">
+          <div class="flex items-center justify-between mb-2.5">
             <div>
-              <span class="text-[9px] font-serif uppercase tracking-widest text-stone-400 block">PRE-TRIP CHECKLIST</span>
-              <h3 class="text-base font-serif font-bold text-stone-900 mt-0.5">行前準備與待辦清單</h3>
+              <span class="text-[9px] font-serif uppercase tracking-widest text-stone-400">Pre-Trip Checklist</span>
+              <h3 class="text-sm font-bold text-stone-800">行前準備與待辦清單</h3>
             </div>
-            <div class="text-xs font-serif font-bold text-stone-400">
-              <span class="text-stone-900">{{ checklist.filter(i => i.checked).length }}</span> / {{ checklist.length }}
+            <div class="flex items-center gap-2">
+              <button @click="addChecklistItem" class="text-[11px] text-morandi-food underline font-bold">＋ 新增</button>
             </div>
           </div>
 
-          <!-- 進度條 -->
-          <div class="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
-            <div 
-              class="h-full bg-morandi-food rounded-full transition-all duration-300"
-              :style="{ width: `${(checklist.filter(i => i.checked).length / checklist.length) * 100}%` }"
-            ></div>
-          </div>
-
-          <div v-if="isEditMode" class="flex justify-end">
-            <button @click="addChecklistItem" class="text-[11px] text-morandi-food underline font-bold">＋ 新增項目</button>
-          </div>
-
-          <div class="space-y-2.5 pt-1">
+          <div class="space-y-2">
             <div 
               v-for="(task, idx) in checklist" 
               :key="idx"
-              class="flex items-center justify-between p-3 rounded-2xl border transition-all w-full shadow-2xs"
-              :class="task.checked ? 'bg-stone-50/70 border-stone-100 text-stone-400' : 'bg-white border-stone-200/70 text-stone-800'"
+              class="flex items-center justify-between p-2.5 rounded-xl border transition-all w-full"
+              :class="task.checked ? 'bg-stone-50/70 border-stone-100 text-stone-400' : 'bg-white border-stone-200/60 shadow-2xs text-stone-700'"
             >
-              <div class="flex items-center gap-3 flex-1 min-w-0">
+              <div class="flex items-center gap-2.5 flex-1 min-w-0">
                 <div 
                   @click="toggleTask(idx)"
-                  class="w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 cursor-pointer transition-colors shadow-2xs"
-                  :class="task.checked ? 'bg-stone-900 border-stone-900 text-white' : 'border-stone-300 bg-white'"
+                  class="w-4.5 h-4.5 rounded-md border flex items-center justify-center shrink-0 cursor-pointer transition-colors"
+                  :class="task.checked ? 'bg-stone-800 border-stone-800 text-white' : 'border-stone-300 bg-white'"
                 >
-                  <span v-if="task.checked" class="text-[11px] font-bold">✓</span>
+                  <span v-if="task.checked" class="text-[10px]">✓</span>
                 </div>
-                <input v-model="task.title" :disabled="!isEditMode" class="bg-transparent text-xs font-medium w-full outline-none" :class="{ 'line-through text-stone-400': task.checked }" />
+                <input v-model="task.title" class="bg-transparent text-xs font-medium w-full outline-none" :class="{ 'line-through': task.checked }" />
               </div>
 
-              <!-- 網址僅顯示 Icon ↗，不顯示文字 -->
-              <div class="flex items-center gap-2 shrink-0 ml-2">
-                <input v-if="isEditMode" v-model="task.link" placeholder="輸入網址..." class="w-24 bg-stone-50 border border-stone-200 rounded px-1.5 py-0.5 text-[10px] outline-none text-morandi-trans" />
-                <a v-if="task.link" :href="task.link" target="_blank" class="w-6 h-6 rounded-full bg-stone-50 border border-stone-200 text-stone-600 flex items-center justify-center text-xs font-bold hover:bg-stone-100 transition shadow-2xs" title="前往網址">↗</a>
+              <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                <input v-if="isEditMode" v-model="task.link" placeholder="輸入網址..." class="w-20 bg-stone-50 border border-stone-200 rounded px-1.5 py-0.5 text-[10px] outline-none text-morandi-trans" />
+                <a v-if="task.link" :href="task.link" target="_blank" class="w-6 h-6 rounded-full bg-stone-50 border border-stone-200 text-stone-600 flex items-center justify-center text-xs font-bold hover:bg-stone-100 transition" title="前往超連結">↗</a>
                 <button v-if="isEditMode" @click="checklist.splice(idx, 1)" class="text-stone-300 hover:text-rose-500 text-xs">✕</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 首爾地圖 (Google Maps 預覽) -->
+        <!-- 首爾地圖 -->
         <div class="app-card p-4 w-full">
           <div class="flex justify-between items-center mb-2.5">
             <div class="flex items-center gap-2">
               <span class="text-base">📍</span>
-              <h3 class="text-xs font-bold text-stone-800">首爾地圖 (Google Maps 預覽)</h3>
+              <h3 class="text-xs font-bold text-stone-800">首爾地圖</h3>
             </div>
-            <a href="https://maps.google.com" target="_blank" class="text-xs text-morandi-trans underline font-serif flex items-center gap-1">
-              <span>🗺️</span> Google 導航
+            <a href="https://map.naver.com" target="_blank" class="text-xs text-morandi-trans underline font-serif flex items-center gap-1">
+              <span>🗺️</span> NAVER 導航
             </a>
           </div>
           
-          <div class="w-full h-48 rounded-xl border border-stone-200/80 overflow-hidden relative bg-stone-100 flex flex-col items-center justify-center">
-            <iframe 
-              class="w-full h-full border-0"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3162.927282711627!2d126.97686537689178!3d37.56653597201394!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x357ca2eb480f2dcf%3A0xb3bc87e5b2257d09!2z6Zu75bGx5bi46ZW3!5e0!3m2!1szh-TW!2stw!4v1700000000000!5m2!1szh-TW!2stw"
-              loading="lazy">
-            </iframe>
-          </div>
+          <div id="homeMap" class="w-full h-44 rounded-xl border border-stone-200/80 overflow-hidden z-10"></div>
           
           <div class="mt-2.5 flex justify-between items-center text-[10px] text-stone-400">
             <span>東大門 ➔ 聖水 ➔ 漢南洞 ➔ 龍山</span>
-            <a href="https://maps.google.com" target="_blank" class="text-morandi-trans underline">開啟 Google Maps App ↗</a>
+            <span>可自由縮放與拖曳</span>
           </div>
         </div>
       </section>
 
-      <!-- ================= 1. 餐廳分頁 (編輯狀態下可見新增或修改，一般狀態隱藏編輯連結) ================= -->
+      <!-- ================= 1. 餐廳分頁 ================= -->
       <section v-if="currentTab === 'FOOD_TAB'" class="space-y-4 w-full">
         <div class="app-card p-5 w-full">
           <div class="flex justify-between items-center mb-3">
             <div>
               <span class="text-[9px] font-serif uppercase tracking-widest text-stone-400">Gourmet Selection</span>
-              <h2 class="text-base font-serif font-bold text-stone-900">首爾精選美食推薦</h2>
+              <h2 class="text-base font-serif font-bold text-stone-900">首爾精選美食</h2>
             </div>
-            <!-- 透過左上三條線進入編輯模式後才會顯示新增餐廳 -->
-            <button v-if="isEditMode" @click="openAddSpotModal('FOOD')" class="px-3 py-1 bg-stone-900 text-white rounded-full text-xs font-medium">＋ 新增餐廳</button>
+            <button @click="openAddSpotModal('FOOD')" class="px-3 py-1 bg-stone-900 text-white rounded-full text-xs font-medium">＋ 新增餐廳</button>
           </div>
+          <p class="text-xs text-stone-500 mb-4">點擊下方餐廳卡片可查看韓文點餐對話（Point & Speak），所有內容均可透過手機自由編輯。</p>
 
           <div class="space-y-3 w-full">
             <div 
               v-for="(spot, fIdx) in allFoodSpots" 
               :key="spot.id || fIdx"
               class="p-4 rounded-2xl border border-stone-200/80 bg-white shadow-2xs space-y-2 cursor-pointer hover:border-stone-400 transition w-full"
-              @click="!isEditMode && openModal(spot)"
+              @click="openModal(spot)"
             >
               <div class="flex justify-between items-center">
                 <span class="text-[10px] font-serif px-2 py-0.5 rounded-full bg-morandi-food/15 text-morandi-food font-bold">【FOOD】</span>
-                <span class="text-xs font-serif text-stone-400">{{ spot.time || '精選推薦' }}</span>
+                <span class="text-xs font-serif text-stone-400">{{ spot.time || '預約餐飲' }}</span>
               </div>
               <h4 class="text-sm font-bold text-stone-900">{{ spot.title }} <span v-if="spot.krTitle" class="text-stone-400 font-normal text-xs">({{ spot.krTitle }})</span></h4>
               <p class="text-xs text-stone-500 line-clamp-2">{{ spot.summary }}</p>
@@ -315,8 +296,7 @@
                 <span class="text-stone-400 truncate max-w-[200px]">{{ spot.address || '查看菜單與詳情' }}</span>
                 <div class="flex gap-2">
                   <a v-if="spot.naverMap" :href="spot.naverMap" target="_blank" @click.stop class="w-7 h-7 rounded-full bg-stone-50 border border-stone-200 text-emerald-700 flex items-center justify-center hover:bg-emerald-50 transition" title="Naver Map">📍</a>
-                  <!-- 透過左上三條線進入編輯模式時才顯示編輯按鈕 -->
-                  <button v-if="isEditMode" @click.stop="openEditSpotModal(spot, fIdx)" class="text-stone-500 underline font-medium px-2 py-0.5 bg-stone-100 rounded">編輯</button>
+                  <button @click.stop="openEditSpotModal(spot, fIdx)" class="text-stone-500 underline">編輯</button>
                 </div>
               </div>
             </div>
@@ -324,16 +304,17 @@
         </div>
       </section>
 
-      <!-- ================= 2. 資訊欄分頁 (透過左上三條線切換編輯狀態) ================= -->
+      <!-- ================= 2. 資訊欄分頁 ================= -->
       <section v-if="currentTab === 'INFO_TAB'" class="space-y-4 w-full">
         <div class="app-card p-5 space-y-3 w-full">
           <div class="flex justify-between items-center">
             <h3 class="text-xs font-serif font-bold uppercase tracking-widest text-stone-400">✈️ Flight Information</h3>
-            <!-- 隱藏原本的單獨編輯按鈕，改由左上三條線控制 isEditMode -->
-            <span v-if="isEditMode" class="text-[10px] bg-morandi-food/15 text-morandi-food px-2 py-0.5 rounded font-bold">編輯中</span>
+            <button @click="isInfoEdit = !isInfoEdit" class="text-xs px-2.5 py-1 bg-stone-800 text-white rounded-lg">
+              {{ isInfoEdit ? '完成' : '編輯資訊' }}
+            </button>
           </div>
 
-          <div v-if="!isEditMode" class="space-y-2.5 text-xs">
+          <div v-if="!isInfoEdit" class="space-y-2.5 text-xs">
             <div class="p-3 bg-stone-50 rounded-xl border border-stone-100">
               <div class="flex justify-between font-serif font-bold text-stone-800">
                 <span>{{ flightInfo.outboundTitle }}</span>
@@ -353,22 +334,22 @@
             </div>
           </div>
 
-          <div v-else class="space-y-2 text-xs bg-stone-50 p-3 rounded-xl border">
-            <input v-model="flightInfo.outboundTitle" class="w-full bg-white border p-1.5 rounded" placeholder="去程標題" />
-            <input v-model="flightInfo.outboundRoute" class="w-full bg-white border p-1.5 rounded" placeholder="去程航線" />
-            <input v-model="flightInfo.outboundTime" class="w-full bg-white border p-1.5 rounded" placeholder="去程時間" />
-            <input v-model="flightInfo.outboundNote" class="w-full bg-white border p-1.5 rounded" placeholder="去程備註" />
+          <div v-else class="space-y-2 text-xs">
+            <input v-model="flightInfo.outboundTitle" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="去程標題" />
+            <input v-model="flightInfo.outboundRoute" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="去程航線" />
+            <input v-model="flightInfo.outboundTime" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="去程時間" />
+            <input v-model="flightInfo.outboundNote" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="去程備註" />
             <hr class="my-2"/>
-            <input v-model="flightInfo.inboundTitle" class="w-full bg-white border p-1.5 rounded" placeholder="回程標題" />
-            <input v-model="flightInfo.inboundRoute" class="w-full bg-white border p-1.5 rounded" placeholder="回程航線" />
-            <input v-model="flightInfo.inboundTime" class="w-full bg-white border p-1.5 rounded" placeholder="回程時間" />
-            <input v-model="flightInfo.inboundNote" class="w-full bg-white border p-1.5 rounded" placeholder="回程備註" />
+            <input v-model="flightInfo.inboundTitle" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="回程標題" />
+            <input v-model="flightInfo.inboundRoute" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="回程航線" />
+            <input v-model="flightInfo.inboundTime" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="回程時間" />
+            <input v-model="flightInfo.inboundNote" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="回程備註" />
           </div>
         </div>
 
         <div class="app-card p-5 space-y-3 w-full">
           <h3 class="text-xs font-serif font-bold uppercase tracking-widest text-stone-400">🏨 Hotel & Stay</h3>
-          <div v-if="!isEditMode" class="p-3 bg-stone-50 rounded-xl border border-stone-100 text-xs space-y-1">
+          <div v-if="!isInfoEdit" class="p-3 bg-stone-50 rounded-xl border border-stone-100 text-xs space-y-1">
             <div class="font-bold text-stone-800 text-sm">{{ hotelInfo.name }}</div>
             <div class="text-stone-600">地址：{{ hotelInfo.address }}</div>
             <div class="text-stone-500 text-[11px]">入住：{{ hotelInfo.checkin }} ｜ 退房：{{ hotelInfo.checkout }}</div>
@@ -378,13 +359,13 @@
             </div>
           </div>
 
-          <div v-else class="space-y-2 text-xs bg-stone-50 p-3 rounded-xl border">
-            <input v-model="hotelInfo.name" class="w-full bg-white border p-1.5 rounded" placeholder="飯店名稱" />
-            <input v-model="hotelInfo.address" class="w-full bg-white border p-1.5 rounded" placeholder="飯店地址" />
-            <input v-model="hotelInfo.checkin" class="w-full bg-white border p-1.5 rounded" placeholder="入住時間" />
-            <input v-model="hotelInfo.checkout" class="w-full bg-white border p-1.5 rounded" placeholder="退房時間" />
-            <input v-model="hotelInfo.naver" class="w-full bg-white border p-1.5 rounded" placeholder="Naver 導航網址" />
-            <input v-model="hotelInfo.voucher" class="w-full bg-white border p-1.5 rounded" placeholder="憑證網址" />
+          <div v-else class="space-y-2 text-xs">
+            <input v-model="hotelInfo.name" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="飯店名稱" />
+            <input v-model="hotelInfo.address" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="飯店地址" />
+            <input v-model="hotelInfo.checkin" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="入住時間" />
+            <input v-model="hotelInfo.checkout" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="退房時間" />
+            <input v-model="hotelInfo.naver" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="Naver 導航網址" />
+            <input v-model="hotelInfo.voucher" class="w-full bg-stone-50 border p-1.5 rounded" placeholder="憑證網址" />
           </div>
         </div>
 
@@ -432,11 +413,10 @@
           </div>
         </div>
 
-        <!-- 新增一筆旅費記錄 -->
         <div class="app-card p-4 space-y-2.5 w-full">
           <h3 class="text-xs font-bold text-stone-700 font-serif">新增一筆旅費記錄</h3>
           <div class="grid grid-cols-3 gap-2 text-xs">
-            <input v-model="newRecord.title" placeholder="項目 (例: 烤肉晚餐)" class="col-span-2 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
+            <input v-model="newRecord.title" placeholder="項目 (例: 囕盈豚烤肉)" class="col-span-2 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
             <select v-model="newRecord.category" class="bg-stone-50 border border-stone-200 rounded-xl px-2 py-2 outline-none text-stone-600">
               <option value="FOOD">餐飲</option>
               <option value="TRANS">交通</option>
@@ -446,17 +426,12 @@
             </select>
           </div>
           <div class="flex gap-2 text-xs">
-            <input v-model.number="newRecord.amount" type="number" placeholder="金額" class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
-            <select v-model="newRecord.currency" class="bg-stone-50 border border-stone-200 rounded-xl px-2 py-2 outline-none text-stone-600 font-medium w-28">
-              <option value="KRW">韓元 (₩)</option>
-              <option value="TWD">台幣 (NT$)</option>
-            </select>
+            <input v-model.number="newRecord.amount" type="number" placeholder="金額 (韓元 ₩)" class="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2 outline-none" />
             <button @click="appendExpense" class="px-4 py-2 bg-stone-800 text-white rounded-xl active:scale-95 transition">加入記帳</button>
           </div>
         </div>
 
-        <!-- 支出明細清單 -->
-        <div class="app-card p-4 space-y-3 w-full">
+        <div class="app-card p-4 space-y-2 w-full">
           <div class="flex justify-between items-center mb-1">
             <h3 class="text-xs font-bold text-stone-700 font-serif">支出明細清單</h3>
             <button @click="exportCSV" class="text-[11px] text-morandi-trans underline flex items-center gap-1">
@@ -468,35 +443,29 @@
             目前尚無支出記錄
           </div>
 
-          <div class="divide-y divide-stone-100">
-            <div 
-              v-for="(rec, rIdx) in expenses" 
-              :key="rIdx" 
-              class="flex items-center justify-between py-3.5 first:pt-1 last:pb-1 text-xs group w-full"
-            >
-              <div class="flex-1 pr-2 space-y-0.5">
-                <div class="font-medium text-stone-900 text-sm">{{ rec.title }}</div>
-                <div class="text-[10px] text-stone-400 font-serif">{{ rec.date }}・{{ rec.category }}</div>
-              </div>
+          <div 
+            v-for="(rec, rIdx) in expenses" 
+            :key="rIdx" 
+            class="flex items-center justify-between py-2 border-b border-stone-50 last:border-0 text-xs group w-full"
+          >
+            <div class="flex-1 pr-2">
+              <div class="font-medium text-stone-800">{{ rec.title }}</div>
+              <div class="text-[10px] text-stone-400 mt-0.5">{{ rec.date }}・{{ rec.category }}</div>
+            </div>
 
-              <div class="flex items-center gap-3">
-                <div class="text-right space-y-0.5">
-                  <div class="font-serif font-bold text-stone-900 text-sm">
-                    {{ rec.currency === 'TWD' ? `NT$ ${rec.amount.toLocaleString()}` : `₩ ${rec.amount.toLocaleString()}` }}
-                  </div>
-                  <div class="text-[10px] text-stone-400 font-serif">
-                    {{ rec.currency === 'TWD' ? `₩ ${(rec.amount * 42).toLocaleString()}` : `NT$ ${Math.round(rec.amount / 42).toLocaleString()}` }}
-                  </div>
-                </div>
-                
-                <button 
-                  @click="removeExpense(rIdx)" 
-                  title="刪除此項"
-                  class="w-7 h-7 rounded-full bg-stone-100 hover:bg-rose-50 text-stone-400 hover:text-rose-500 flex items-center justify-center transition-colors text-xs active:scale-90"
-                >
-                  ✕
-                </button>
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <div class="font-serif font-bold text-stone-800">₩ {{ rec.amount.toLocaleString() }}</div>
+                <div class="text-[10px] text-stone-400 font-serif">NT$ {{ Math.round(rec.amount / 42).toLocaleString() }}</div>
               </div>
+              
+              <button 
+                @click="removeExpense(rIdx)" 
+                title="刪除此項"
+                class="w-5 h-5 rounded-full bg-stone-100 hover:bg-rose-50 text-stone-400 hover:text-rose-500 flex items-center justify-center transition-colors text-[10px] active:scale-90"
+              >
+                ✕
+              </button>
             </div>
           </div>
         </div>
@@ -539,8 +508,8 @@
           </div>
 
           <div class="pt-2 border-t border-stone-100 text-xs text-stone-400 space-y-1">
-            <p>行程資料庫 : LocalStorage (全自動離線同步)</p>
-            <p>目前版本 : v5.6 Mobile Pro Edition</p>
+            <p>行程資料庫：LocalStorage (全自動離線同步)</p>
+            <p>目前版本：v4.8 Mobile Pro Edition</p>
           </div>
         </div>
       </section>
@@ -607,7 +576,7 @@
         <!-- 支援手勢觸控拖曳排序的清單容器 -->
         <div 
           id="itineraryList" 
-          class="relative pl-6 space-y-3.5 before:content-[''] before:absolute before:left-[11px] before:top-3 before:bottom-3 before:w-[1.5px] before:bg-stone-200 w-full"
+          class="relative pl-6 space-y-3.5 before:content-[''] before:absolute before:left-[11px] before:top-3 before:bottom-3 before:w-[1.5px] before:bg-stone-250 w-full"
         >
           <div 
             v-for="(spot, sIdx) in itineraryData[currentTab]" 
@@ -1073,8 +1042,7 @@
 
     createApp({
       setup() {
-        // 設定進入網頁的第一個主畫面為 HOME 頁
-        const currentTab = ref('HOME');
+        const currentTab = ref('DAY1');
         const selectedModal = ref(null);
         const showCartModal = ref(false);
         const copyStatus = ref(false);
@@ -1193,23 +1161,18 @@
               if (spot.type === 'FOOD') list.push(spot);
             });
           });
-          const extraFoods = [
-            { id: 'ex_1', time: '精選推薦', type: 'FOOD', title: '廣藏市場 順熙家綠豆煎餅', krTitle: '순희네빈대떡', summary: '外皮酥脆內餡扎實的傳統綠豆煎餅，搭配洋蔥醬油解膩。', address: '서울 종로구 종로32길 5', naverMap: 'https://naver.me/5vj1K2m9', tags: [{ text: '必吃 綠豆煎餅', color: '#B5838D' }] },
-            { id: 'ex_2', time: '精選推薦', type: 'FOOD', title: '明洞 刀削麵 (元祖)', krTitle: '명동교자 본점', summary: '米其林必比登推薦，濃郁雞湯底刀削麵與蒜香十足的泡菜。', address: '서울 중구 명동10길 29', naverMap: 'https://naver.me/xYn3L8p3', tags: [{ text: '米其林推薦', color: '#8EA499' }] },
-            { id: 'ex_3', time: '精選推薦', type: 'FOOD', title: '倫敦貝果博物館 安國店', krTitle: 'London Bagel Museum', summary: '首爾最火紅的排隊貝果店，多種扎實Q彈口味與濃郁奶油乳酪。', address: '서울 종로구 북촌로 4길 20', naverMap: 'https://naver.me/G9hd5kL8', tags: [{ text: '人氣排隊名店', color: '#C99E7A' }] }
-          ];
-          return [...list, ...extraFoods];
+          return list;
         });
 
         const expenses = ref([
-          { title: 'Link korea', category: 'SHOP', amount: 14580, currency: 'KRW', date: '09/19' },
-          { title: '東廟 SPAREX 汗蒸幕入場 (2人)', category: 'STAY', amount: 30000, currency: 'KRW', date: '09/19' },
-          { title: '囕盈豚 烤肉晚餐', category: 'FOOD', amount: 84000, currency: 'KRW', date: '09/19' },
-          { title: '漢南洞馬鈴薯排骨湯', category: 'FOOD', amount: 48000, currency: 'KRW', date: '09/20' },
-          { title: '清溪川 emart 零食採購', category: 'SHOP', amount: 92000, currency: 'KRW', date: '09/20' },
-          { title: 'AREX 機場快線直達票 (2人)', category: 'TRANS', amount: 22000, currency: 'KRW', date: '09/21' }
+          { title: '機場巴士 6002 (2人)', category: 'TRANS', amount: 34000, date: '09/19' },
+          { title: '東廟 SPAREX 汗蒸幕入場 (2人)', category: 'STAY', amount: 30000, date: '09/19' },
+          { title: '囕盈豚 烤肉晚餐', category: 'FOOD', amount: 84000, date: '09/19' },
+          { title: '漢南洞馬鈴薯排骨湯', category: 'FOOD', amount: 48000, date: '09/20' },
+          { title: '清溪川 e-mart 零食採購', category: 'SHOP', amount: 92000, date: '09/20' },
+          { title: 'AREX 機場快線直達票 (2人)', category: 'TRANS', amount: 22000, date: '09/21' }
         ]);
-        const newRecord = ref({ title: '', category: 'FOOD', amount: null, currency: 'KRW' });
+        const newRecord = ref({ title: '', category: 'FOOD', amount: null });
 
         const defaultShoppingList = [
           { id: 1, title: 'Delight project Honey Butter Bagel Chips...', store: 'Olive Young', priceTWD: 110, img: 'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?w=200&auto=format&fit=crop&q=80', link: 'https://global.oliveyoung.com', bought: true },
@@ -1319,7 +1282,7 @@
             id: Date.now(),
             title: newCartItem.value.title,
             store: newCartItem.value.store,
-            priceTWD: newCartItem.value.priceTWD || 0,
+            priceTWD: newCartItem.value.priceTWP || 0,
             img: newCartItem.value.title.startsWith('http') ? newCartItem.value.title : '',
             link: newCartItem.value.title.startsWith('http') ? newCartItem.value.title : '',
             bought: false
@@ -1361,6 +1324,38 @@
           return groups;
         });
 
+        let mapInstance = null;
+        const initHomeMap = () => {
+          nextTick(() => {
+            const container = document.getElementById('homeMap');
+            if (!container || mapInstance) return;
+
+            mapInstance = L.map('homeMap', {
+              center: [37.550, 127.010],
+              zoom: 12,
+              zoomControl: false
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 18,
+              attribution: '© OpenStreetMap'
+            }).addTo(mapInstance);
+
+            const spots = [
+              { name: '東廟 ARA Hotel', pos: [37.5732, 127.0245] },
+              { name: '聖水洞 / 囕盈豚', pos: [37.5445, 127.0560] },
+              { name: '盤浦漢江彩虹噴泉', pos: [37.5098, 126.9947] },
+              { name: '明洞商圈', pos: [37.5635, 126.9840] },
+              { name: '漢南洞排骨湯', pos: [37.5338, 127.0041] },
+              { name: '龍山解放村', pos: [37.5435, 126.9868] }
+            ];
+
+            spots.forEach(s => {
+              L.marker(s.pos).addTo(mapInstance).bindPopup(`<b>${s.name}</b>`);
+            });
+          });
+        };
+
         const getMapPreviewUrl = (spot) => {
           const lat = spot.lat || 37.5665;
           const lng = spot.lng || 126.9780;
@@ -1368,19 +1363,19 @@
         };
 
         onMounted(() => {
-          const savedItinerary = localStorage.getItem('seoul_2026_itinerary_v16');
+          const savedItinerary = localStorage.getItem('seoul_2026_itinerary_v15');
           if (savedItinerary) {
             try { itineraryData.value = JSON.parse(savedItinerary); } catch (e) {}
           }
-          const savedCart = localStorage.getItem('seoul_2026_cart_v16');
+          const savedCart = localStorage.getItem('seoul_2026_cart_v15');
           if (savedCart) {
             try { shoppingList.value = JSON.parse(savedCart); } catch (e) {}
           }
-          const savedExpenses = localStorage.getItem('seoul_2026_expenses_v6');
+          const savedExpenses = localStorage.getItem('seoul_2026_expenses');
           if (savedExpenses) {
             try { expenses.value = JSON.parse(savedExpenses); } catch (e) {}
           }
-          const savedChecklist = localStorage.getItem('seoul_2026_checklist_v17');
+          const savedChecklist = localStorage.getItem('seoul_2026_checklist_v12');
           if (savedChecklist) {
             try { checklist.value = JSON.parse(savedChecklist); } catch (e) {}
           }
@@ -1397,23 +1392,24 @@
             try { accountInfo.value = JSON.parse(savedAccount); } catch (e) {}
           }
 
+          initHomeMap();
           setupSortable();
         });
 
         watch(itineraryData, (val) => {
-          localStorage.setItem('seoul_2026_itinerary_v16', JSON.stringify(val));
+          localStorage.setItem('seoul_2026_itinerary_v15', JSON.stringify(val));
         }, { deep: true });
 
         watch(shoppingList, (val) => {
-          localStorage.setItem('seoul_2026_cart_v16', JSON.stringify(val));
+          localStorage.setItem('seoul_2026_cart_v15', JSON.stringify(val));
         }, { deep: true });
 
         watch(expenses, (val) => {
-          localStorage.setItem('seoul_2026_expenses_v6', JSON.stringify(val));
+          localStorage.setItem('seoul_2026_expenses', JSON.stringify(val));
         }, { deep: true });
 
         watch(checklist, (val) => {
-          localStorage.setItem('seoul_2026_checklist_v17', JSON.stringify(val));
+          localStorage.setItem('seoul_2026_checklist_v12', JSON.stringify(val));
         }, { deep: true });
 
         watch(flightInfo, (val) => {
@@ -1429,7 +1425,9 @@
         }, { deep: true });
 
         watch(currentTab, (val) => {
-          if (val !== 'HOME') {
+          if (val === 'HOME') {
+            initHomeMap();
+          } else {
             isEditMode.value = false;
             setupSortable();
           }
@@ -1440,11 +1438,7 @@
         };
 
         const totalKRW = computed(() => {
-          return expenses.value.reduce((sum, item) => {
-            const amt = item.amount || 0;
-            const valInKRW = item.currency === 'TWD' ? amt * 42 : amt;
-            return sum + valInKRW;
-          }, 0);
+          return expenses.value.reduce((sum, item) => sum + (item.amount || 0), 0);
         });
 
         const appendExpense = () => {
@@ -1453,7 +1447,6 @@
             title: newRecord.value.title,
             category: newRecord.value.category,
             amount: newRecord.value.amount,
-            currency: newRecord.value.currency || 'KRW',
             date: '09/19'
           });
           newRecord.value.title = '';
@@ -1466,10 +1459,9 @@
 
         const exportCSV = () => {
           let csv = "data:text/csv;charset=utf-8,\uFEFF";
-          csv += "日期,類別,項目名稱,金額,幣別,約當韓元(KRW)\n";
+          csv += "日期,類別,項目名稱,金額(KRW),約當台幣(TWD)\n";
           expenses.value.forEach(row => {
-            const inKRW = row.currency === 'TWD' ? row.amount * 42 : row.amount;
-            csv += `${row.date},${row.category},"${row.title}",${row.amount},${row.currency || 'KRW'},${inKRW}\n`;
+            csv += `${row.date},${row.category},"${row.title}",${row.amount},${Math.round(row.amount / 42)}\n`;
           });
           const uri = encodeURI(csv);
           const link = document.createElement("a");
